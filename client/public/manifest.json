@@ -1,0 +1,19 @@
+{
+  "name": "Qué Comemos",
+  "short_name": "Qué Comemos",
+  "description": "Decide qué cocinar hoy basándote en los ingredientes que tienes en casa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF9E6",
+  "theme_color": "#FF1744",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
