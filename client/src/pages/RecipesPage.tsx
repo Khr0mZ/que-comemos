@@ -12,7 +12,12 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import RecipeCard from "../components/RecipeCard";
 import WarningDialog from "../components/WarningDialog";
-import { deleteRecipe, useRecipes } from "../hooks/useStorage";
+import {
+  deleteAllRecipes,
+  deleteRecipe,
+  resetRecipes,
+  useRecipes,
+} from "../hooks/useStorage";
 import type { Recipe } from "../types";
 
 const ITEMS_PER_PAGE = 30;
@@ -26,6 +31,8 @@ export default function RecipesPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
 
   const { recipes: allRecipes } = useRecipes();
 
@@ -109,6 +116,40 @@ export default function RecipesPage() {
     setRecipeToDelete(null);
   }, []);
 
+  const handleReset = useCallback(() => {
+    setResetDialogOpen(true);
+  }, []);
+
+  const confirmReset = useCallback(async () => {
+    try {
+      await resetRecipes();
+      setResetDialogOpen(false);
+    } catch (error) {
+      console.error("Error resetting recipes:", error);
+    }
+  }, []);
+
+  const cancelReset = useCallback(() => {
+    setResetDialogOpen(false);
+  }, []);
+
+  const handleDeleteAll = useCallback(() => {
+    setDeleteAllDialogOpen(true);
+  }, []);
+
+  const confirmDeleteAll = useCallback(async () => {
+    try {
+      await deleteAllRecipes();
+      setDeleteAllDialogOpen(false);
+    } catch (error) {
+      console.error("Error deleting all recipes:", error);
+    }
+  }, []);
+
+  const cancelDeleteAll = useCallback(() => {
+    setDeleteAllDialogOpen(false);
+  }, []);
+
   // Attach scroll listener to window
   useEffect(() => {
     window.addEventListener("scroll", handleScroll);
@@ -135,13 +176,40 @@ export default function RecipesPage() {
         <Typography variant="h2" component="h2">
           {t("recipes.title")}
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<span style={{ fontSize: "1.2rem" }}>➕</span>}
-          onClick={() => navigate("/recipe/new")}
-        >
-          {t("recipes.addRecipe")}
-        </Button>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteAll}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <span style={{ fontSize: "1rem" }}>🗑️</span>
+            <Box sx={{ display: { xs: "none", md: "flex" } }}>
+              {t("recipes.deleteAllRecipes")}
+            </Box>
+          </Button>
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={handleReset}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <span style={{ fontSize: "1rem" }}>🔄</span>
+            <Box sx={{ display: { xs: "none", md: "flex" } }}>
+              {t("recipes.resetRecipes")}
+            </Box>
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => navigate("/recipe/new")}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <span style={{ fontSize: "1rem" }}>➕</span>
+            <Box sx={{ display: { xs: "none", md: "flex" } }}>
+              {t("recipes.addRecipe")}
+            </Box>
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ mb: 3 }}>
@@ -222,6 +290,22 @@ export default function RecipesPage() {
         message={t("recipes.deleteRecipeMessage")}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
+      />
+
+      <WarningDialog
+        open={resetDialogOpen}
+        title={t("recipes.resetRecipes")}
+        message={t("recipes.resetRecipesMessage")}
+        onConfirm={confirmReset}
+        onCancel={cancelReset}
+      />
+
+      <WarningDialog
+        open={deleteAllDialogOpen}
+        title={t("recipes.deleteAllRecipes")}
+        message={t("recipes.deleteAllRecipesMessage")}
+        onConfirm={confirmDeleteAll}
+        onCancel={cancelDeleteAll}
       />
     </Container>
   );

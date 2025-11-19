@@ -22,6 +22,15 @@
     "edit": "Editar",
     "delete": "Eliminar",
     "deleteMessage": "¿Estás seguro de querer eliminar este ingrediente?",
+    "ingredientUpdated": "Ingrediente actualizado",
+    "addToShoppingList": "Agregar al carrito de la compra",
+    "addedToShoppingList": "Agregado al carrito de la compra",
+    "ingredientName": "Ingrediente",
+    "add": "Agregar",
+    "shoppingMeasureHint": "Ingresa la cantidad que necesitas comprar",
+    "deleteAllIngredients": "Eliminar Todo el Inventario",
+    "deleteAllIngredientsMessage": "¿Estás seguro de querer eliminar todos los ingredientes del inventario? Esta acción no se puede deshacer.",
+    "allIngredientsDeleted": "Todos los ingredientes han sido eliminados",
     "categories": {
       "vegetable": "Verdura",
       "fruit": "Fruta",
@@ -55,13 +64,18 @@
     "ingredientName": "Nombre del ingrediente",
     "ingredientQuantity": "Cantidad",
     "ingredientUnit": "Unidad",
+    "ingredientMeasure": "Medida",
     "imageUrl": "URL de Imagen",
     "videoUrl": "URL de Video (YouTube)",
     "sourceUrl": "URL de Fuente",
     "video": "Video",
     "watchVideo": "Ver Video",
     "hideVideo": "Ocultar Video",
-    "viewSource": "Ver Fuente"
+    "viewSource": "Ver Fuente",
+    "resetRecipes": "Resetear Recetas",
+    "resetRecipesMessage": "¿Estás seguro de querer resetear todas las recetas? Esto restaurará las recetas originales y eliminará todas las modificaciones.",
+    "deleteAllRecipes": "Borrar Todas las Recetas",
+    "deleteAllRecipesMessage": "¿Estás seguro de querer borrar todas las recetas? Esta acción no se puede deshacer."
   },
   "home": {
     "title": "¿Qué comemos?",
@@ -72,14 +86,82 @@
     "selectIngredients": "Elige ingredientes disponibles",
     "searchRecipes": "Buscar Recetas",
     "generateAI": "Generar Receta con IA",
-    "shoppingList": "Lista de la Compra",
+    "shoppingList": "Carrito de la compra",
     "missingIngredients": "Ingredientes faltantes",
     "allAvailable": "¡Todos los ingredientes están disponibles!",
+    "inventoryIngredientsUsed": "Ingredientes del inventario usados en la receta",
+    "adjustQuantities": "Ajusta las cantidades según lo que uses de la receta",
+    "requiredInRecipe": "Requerido en receta",
+    "noMeasure": "Sin medida",
+    "confirmRecipe": "Confirmar Receta",
+    "recipeConfirmed": "Receta confirmada. Cambios aplicados al inventario.",
+    "recipeConfirmedAllAvailable": "Receta confirmada. Todos los ingredientes están disponibles. Ve a Cocinar para ver las instrucciones.",
+    "missingIngredientsCopied": "Ingredientes faltantes copiados al portapapeles",
+    "copyToClipboard": "Copiar",
     "noResults": "No se encontraron recetas con esos criterios.",
     "noIngredientsAvailable": "No hay ingredientes disponibles. Añade ingredientes a tu inventario.",
     "loading": "Cargando...",
     "generating": "Generando receta...",
     "aiThinking": "La IA está pensando..."
+  },
+  "shopping": {
+    "title": "Carrito de la compra",
+    "generalItems": "Ingredientes sin receta",
+    "recipeLists": "Listas por receta",
+    "noItems": "No hay items en tu carrito de la compra.",
+    "noMeasure": "Sin medida",
+    "copy": "Copiar",
+    "removeRecipe": "Puedes eliminar esta lista",
+    "copied": "Copiado al portapapeles",
+    "inventoryUpdated": "Inventario actualizado",
+    "confirmInventory": "Confirmar Cambios",
+    "allItemsPurchased": "Todos los ingredientes han sido comprados",
+    "manageInventory": "Puedes gestionar los ingredientes del inventario arriba",
+    "ingredientAddedToInventory": "Agregado al inventario",
+    "goToCooking": "Ve a la página de Cocinar para gestionar el inventario y ver las instrucciones",
+    "removeRecipe": "Eliminar Receta del Carrito",
+    "removeRecipeMessage": "¿Estás seguro de querer eliminar \"{{recipe}}\" del carrito de compra? También se eliminará de la planificación semanal.",
+    "recipeRemovedFromShopping": "Receta eliminada del carrito de compra"
+  },
+  "cooking": {
+    "title": "Cocinar",
+    "noRecipes": "No hay recetas listas para cocinar. Compra todos los ingredientes faltantes primero.",
+    "inventoryIngredientsUsed": "Ingredientes del inventario usados en la receta",
+    "adjustQuantities": "Ajusta las cantidades según lo que uses de la receta",
+    "requiredInRecipe": "Requerido en receta",
+    "noMeasure": "Sin medida",
+    "confirmInventory": "Confirmar",
+    "inventoryUpdated": "Inventario actualizado",
+    "instructions": "Instrucciones",
+    "completeRecipe": "¡A comer!",
+    "recipeCompleted": "¡Receta completada! ¡A comer!"
+  },
+  "week": {
+    "title": "Planificación Semanal",
+    "addRecipeToWeek": "Añadir Receta a la Semana",
+    "selectDay": "Seleccionar Día",
+    "selectMealType": "Seleccionar Comida",
+    "noRecipes": "Sin recetas",
+    "recipeAddedToWeek": "Receta añadida a la semana y lista de compra.",
+    "recipeRemoved": "Receta eliminada de la semana",
+    "removeRecipe": "Eliminar Receta de la Semana",
+    "removeRecipeMessage": "¿Estás seguro de querer eliminar \"{{recipe}}\" del {{day}} ({{meal}})?",
+    "clearWeek": "Limpiar Semana",
+    "clearWeekMessage": "¿Estás seguro de querer limpiar toda la planificación semanal? Esto eliminará todas las recetas de la semana y de la lista de compra. Esta acción no se puede deshacer.",
+    "weekCleared": "Planificación semanal eliminada",
+    "days": {
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado",
+      "sunday": "Domingo"
+    },
+    "mealTypes": {
+      "lunch": "Comida",
+      "dinner": "Cena"
+    }
   },
   "common": {
     "loading": "Cargando...",
@@ -89,7 +171,8 @@
     "back": "Atrás",
     "save": "Guardar",
     "cancel": "Cancelar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "edit": "Editar"
   },
   "ingredients": {
     "ackee": "Akee",
@@ -871,5 +954,12 @@
     "Warm": "Caliente",
     "Warming": "Calentador",
     "heavy": "Pesado"
+  },
+  "auth": {
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "welcome": "Bienvenido a ¿Qué Comemos?",
+    "pleaseSignIn": "Por favor inicia sesión para acceder a todas las funcionalidades",
+    "signInToContinue": "Inicia sesión para continuar"
   }
 }

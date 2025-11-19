@@ -22,6 +22,15 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "delete": "Delete",
+    "ingredientUpdated": "Ingredient updated",
+    "addToShoppingList": "Add to Shopping Cart",
+    "addedToShoppingList": "Added to Shopping Cart",
+    "ingredientName": "Ingredient",
+    "add": "Add",
+    "shoppingMeasureHint": "Enter the quantity you need to buy",
+    "deleteAllIngredients": "Delete All Inventory",
+    "deleteAllIngredientsMessage": "Are you sure you want to delete all ingredients from inventory? This action cannot be undone.",
+    "allIngredientsDeleted": "All ingredients have been deleted",
     "categories": {
       "vegetable": "Vegetable",
       "fruit": "Fruit",
@@ -55,13 +64,18 @@
     "ingredientName": "Ingredient name",
     "ingredientQuantity": "Quantity",
     "ingredientUnit": "Unit",
+    "ingredientMeasure": "Measure",
     "imageUrl": "Image URL",
     "videoUrl": "Video URL (YouTube)",
     "sourceUrl": "Source URL",
     "video": "Video",
     "watchVideo": "Watch Video",
     "hideVideo": "Hide Video",
-    "viewSource": "View Source"
+    "viewSource": "View Source",
+    "resetRecipes": "Reset Recipes",
+    "resetRecipesMessage": "Are you sure you want to reset all recipes? This will restore the original recipes and remove all modifications.",
+    "deleteAllRecipes": "Delete All Recipes",
+    "deleteAllRecipesMessage": "Are you sure you want to delete all recipes? This action cannot be undone."
   },
   "home": {
     "title": "What are we eating?",
@@ -72,14 +86,82 @@
     "selectIngredients": "Choose available ingredients",
     "searchRecipes": "Search Recipes",
     "generateAI": "Generate Recipe with AI",
-    "shoppingList": "Shopping List",
+    "shoppingList": "Shopping Cart",
     "missingIngredients": "Missing ingredients",
     "allAvailable": "All ingredients are available!",
+    "inventoryIngredientsUsed": "Inventory ingredients used in recipe",
+    "adjustQuantities": "Adjust quantities based on what you use from the recipe",
+    "requiredInRecipe": "Required in recipe",
+    "noMeasure": "No measure",
+    "confirmRecipe": "Confirm Recipe",
+    "recipeConfirmed": "Recipe confirmed. Changes applied to inventory.",
+    "recipeConfirmedAllAvailable": "Recipe confirmed. All ingredients are available. Go to Cooking to view instructions.",
+    "missingIngredientsCopied": "Missing ingredients copied to clipboard",
+    "copyToClipboard": "Copy",
     "noResults": "No recipes found with those criteria.",
     "noIngredientsAvailable": "No ingredients available. Add ingredients to your inventory.",
     "loading": "Loading...",
     "generating": "Generating recipe...",
     "aiThinking": "AI is thinking..."
+  },
+  "shopping": {
+    "title": "Shopping Cart",
+    "generalItems": "Ingredients without recipe",
+    "recipeLists": "Lists by recipe",
+    "noItems": "No items in your shopping cart.",
+    "noMeasure": "No measure",
+    "copy": "Copy",
+    "removeRecipe": "You can remove this list",
+    "copied": "Copied to clipboard",
+    "inventoryUpdated": "Inventory updated",
+    "confirmInventory": "Confirm Changes",
+    "allItemsPurchased": "All ingredients have been purchased",
+    "manageInventory": "You can manage inventory ingredients above",
+    "ingredientAddedToInventory": "Added to inventory",
+    "goToCooking": "Go to Cooking page to manage inventory and view instructions",
+    "removeRecipe": "Remove Recipe from Shopping Cart",
+    "removeRecipeMessage": "Are you sure you want to remove \"{{recipe}}\" from shopping cart? It will also be removed from weekly planning.",
+    "recipeRemovedFromShopping": "Recipe removed from shopping cart"
+  },
+  "cooking": {
+    "title": "Cooking",
+    "noRecipes": "No recipes ready to cook. Buy all missing ingredients first.",
+    "inventoryIngredientsUsed": "Inventory ingredients used in recipe",
+    "adjustQuantities": "Adjust quantities based on what you use from the recipe",
+    "requiredInRecipe": "Required in recipe",
+    "noMeasure": "No measure",
+    "confirmInventory": "Confirm",
+    "inventoryUpdated": "Inventory updated",
+    "instructions": "Instructions",
+    "completeRecipe": "Let's eat!",
+    "recipeCompleted": "Recipe completed! Let's eat!"
+  },
+  "week": {
+    "title": "Weekly Planning",
+    "addRecipeToWeek": "Add Recipe to Week",
+    "selectDay": "Select Day",
+    "selectMealType": "Select Meal",
+    "noRecipes": "No recipes",
+    "recipeAddedToWeek": "Recipe added to week and shopping list.",
+    "recipeRemoved": "Recipe removed from week",
+    "removeRecipe": "Remove Recipe from Week",
+    "removeRecipeMessage": "Are you sure you want to remove \"{{recipe}}\" from {{day}} ({{meal}})?",
+    "clearWeek": "Clear Week",
+    "clearWeekMessage": "Are you sure you want to clear the entire weekly planning? This will remove all recipes from the week and shopping list. This action cannot be undone.",
+    "weekCleared": "Weekly planning cleared",
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "mealTypes": {
+      "lunch": "Lunch",
+      "dinner": "Dinner"
+    }
   },
   "common": {
     "loading": "Loading...",
@@ -89,7 +171,8 @@
     "back": "Back",
     "save": "Save",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "edit": "Edit"
   },
   "ingredients": {
     "ackee": "Ackee",
@@ -871,5 +954,12 @@
     "Warm": "Warm",
     "Warming": "Warming",
     "heavy": "heavy"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "welcome": "Welcome to What are we eating?",
+    "pleaseSignIn": "Please sign in to access all features",
+    "signInToContinue": "Sign in to continue"
   }
 }

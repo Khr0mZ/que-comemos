@@ -10,7 +10,12 @@ lerna-debug.log*
 client/node_modules
 client/dist
 client/dist-ssr
+client/cloudflared
 *.local
+
+# Archivos JSON de base de datos (ahora son por usuario)
+client/src/db/*.json
+client/src/db/user_*/
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +29,5 @@ client/dist-ssr
 *.sw?
 
 .history/*
+
+.env

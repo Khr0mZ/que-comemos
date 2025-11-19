@@ -5,6 +5,15 @@ import { dbWriterPlugin } from './vite-plugin-db-writer'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    host: '0.0.0.0', // Escuchar en todas las interfaces de red
+    port: 5173, // Puerto por defecto de Vite
+    allowedHosts: [
+      '.trycloudflare.com', // Permitir todos los subdominios de Cloudflare Tunnel
+      'localhost',
+      '.localhost',
+    ],
+  },
   plugins: [
     react(),
     dbWriterPlugin(),

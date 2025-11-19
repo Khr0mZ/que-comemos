@@ -1,5 +1,4 @@
 import {
-  Alert,
   Autocomplete,
   Avatar,
   Box,
@@ -11,14 +10,10 @@ import {
   CircularProgress,
   Collapse,
   Container,
-  FormControl,
   IconButton,
-  InputLabel,
   List,
   ListItem,
   ListItemText,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -29,14 +24,16 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import areasData from "../data/recipes/areas.json";
 import categoriesData from "../data/recipes/categories.json";
 import tagsData from "../data/recipes/tags.json";
+import WeekMealDialog from "../components/WeekMealDialog";
 import { useSnackbar } from "../hooks/useSnackbar";
 import {
+  addRecipeToWeek,
   saveRecipe,
   storage,
   updateRecipe,
   useIngredients,
 } from "../hooks/useStorage";
-import type { Recipe, RecipeIngredient } from "../types";
+import type { DayOfWeek, MealType, Recipe, RecipeIngredient } from "../types";
 import {
   getAllIngredientNames,
   translateIngredient,
@@ -72,6 +69,7 @@ export default function RecipeDetailPage() {
     ReturnType<typeof checkRecipeAvailability>
   > | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [weekDialogOpen, setWeekDialogOpen] = useState(false);
 
   const categories = categoriesData as string[];
   const areas = areasData as string[];
@@ -328,6 +326,40 @@ export default function RecipeDetailPage() {
     });
   };
 
+  const handleConfirmRecipe = () => {
+    if (!recipe) return;
+    // Abrir el diálogo para elegir día y comida/cena
+    setWeekDialogOpen(true);
+  };
+
+  const handleWeekDialogConfirm = async (day: DayOfWeek, mealType: MealType) => {
+    if (!recipe) return;
+
+    try {
+      // Agregar la receta a la semana
+      await addRecipeToWeek(day, mealType, recipe.name);
+
+      // Agregar la receta a la lista de compra, incluso si no hay ingredientes faltantes
+      // Esto permite que la receta aparezca en CookingPage si todos los ingredientes están disponibles
+      const missingIngredients = availability?.missingIngredients || [];
+      await storage.addRecipeShoppingList(recipe.name, missingIngredients);
+
+      showSnackbar(
+        t("week.recipeAddedToWeek") ||
+          "Receta añadida a la semana y lista de compra.",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error confirming recipe:", error);
+      showSnackbar(
+        t("common.error") +
+          ": " +
+          (error instanceof Error ? error.message : "Error desconocido"),
+        "error"
+      );
+    }
+  };
+
   const canEdit = recipe && (recipe.source === "local" || !recipe.source);
   const isNewRecipe = isCreating;
 
@@ -371,7 +403,7 @@ export default function RecipeDetailPage() {
         >
           {t("common.back")}
         </Button>
-        {canEdit && !isEditing && !isNewRecipe && (
+        {canEdit && !isEditing && !isNewRecipe && !location.state?.fromHomePage && (
           <Button
             variant="contained"
             startIcon={<span style={{ fontSize: "1.2rem" }}>✏️</span>}
@@ -441,26 +473,23 @@ export default function RecipeDetailPage() {
                       />
                     )}
                   />
-                  <FormControl fullWidth>
-                    <InputLabel>{t("recipes.area")}</InputLabel>
-                    <Select
-                      value={formData.area}
-                      onChange={(e) =>
-                        setFormData({ ...formData, area: e.target.value })
-                      }
-                      label={t("recipes.area")}
-                      displayEmpty
-                    >
-                      <MenuItem value="">
-                        <em>{t("recipes.area")}</em>
-                      </MenuItem>
-                      {areas.map((area) => (
-                        <MenuItem key={area} value={area}>
-                          {t(`areas.${area}`, { defaultValue: area })}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    options={areas}
+                    value={formData.area || null}
+                    onChange={(_, newValue) =>
+                      setFormData({ ...formData, area: newValue || "" })
+                    }
+                    getOptionLabel={(option) =>
+                      t(`areas.${option}`, { defaultValue: option })
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t("recipes.area")}
+                        placeholder="Selecciona un área"
+                      />
+                    )}
+                  />
                   <Autocomplete
                     multiple
                     options={tags}
@@ -676,31 +705,21 @@ export default function RecipeDetailPage() {
         </Collapse>
       )}
 
-      {!isEditing && availability && (
-        <Alert
-          severity={
-            availability.missingIngredients.length === 0 ? "success" : "info"
-          }
-          sx={{ mb: 3 }}
-        >
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            {t("home.shoppingList")}
-          </Typography>
-          {availability.missingIngredients.length === 0 ? (
-            <Typography>{t("home.allAvailable")}</Typography>
-          ) : (
-            <List dense key={`missing-ingredients-${i18n.language}`}>
-              {availability.missingIngredients.map((item, idx) => (
-                <ListItem key={idx}>
-                  <ListItemText
-                    primary={translateIngredient(item.name)}
-                    secondary={item.measure}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </Alert>
+      {!isEditing && availability && location.state?.fromHomePage && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleConfirmRecipe}
+                startIcon={<span style={{ fontSize: "1.2rem" }}>✓</span>}
+              >
+                {t("home.confirmRecipe") || "Confirmar Receta"}
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
       )}
 
       <Box
@@ -796,6 +815,7 @@ export default function RecipeDetailPage() {
                         renderInput={(params) => (
                           <TextField
                             {...params}
+                            label={t("recipes.ingredientName")}
                             placeholder={t("recipes.ingredientName")}
                             size="small"
                             sx={{ flex: 2 }}
@@ -805,9 +825,8 @@ export default function RecipeDetailPage() {
                         size="small"
                       />
                       <TextField
-                        placeholder={
-                          t("recipes.ingredientMeasure") || "Medida (ej: 2 kg)"
-                        }
+                        label={t("recipes.ingredientMeasure")}
+                        placeholder="ej: 2 kg"
                         value={ing.measure}
                         onChange={(e) =>
                           updateIngredient(index, "measure", e.target.value)
@@ -928,6 +947,13 @@ export default function RecipeDetailPage() {
           </Button>
         </Box>
       )}
+
+      <WeekMealDialog
+        open={weekDialogOpen}
+        recipeName={recipe?.name || ""}
+        onClose={() => setWeekDialogOpen(false)}
+        onConfirm={handleWeekDialogConfirm}
+      />
     </Container>
   );
 }

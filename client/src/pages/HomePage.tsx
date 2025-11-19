@@ -37,7 +37,6 @@ export default function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
-  const [selectedRecipeName, setSelectedRecipeName] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
@@ -88,23 +87,24 @@ export default function HomePage() {
   const { recipes: allRecipes } = useRecipes();
   const { ingredients: allIngredients } = useIngredients();
 
+  // Filtrar ingredientes disponibles: deben tener measure definido y no ser "0"
+  const availableIngredients = useMemo(() => {
+    return allIngredients.filter(
+      (ing) =>
+        ing.measure !== undefined &&
+        ing.measure !== null &&
+        ing.measure.trim() !== "" &&
+        ing.measure.trim() !== "0"
+    );
+  }, [allIngredients]);
+
   const handleSearch = async () => {
     setLoading(true);
     setShowResults(true);
 
     let filtered: Recipe[] = [];
 
-    // Caso A: Receta preseleccionada
-    if (selectedRecipeName) {
-      const recipe = allRecipes.find((r) => r.name === selectedRecipeName);
-      if (recipe) {
-        // Usar el nombre como identificador en la URL
-        navigate(`/recipe/${encodeURIComponent(recipe.name)}`);
-        return;
-      }
-    }
-
-    // Caso B: Búsqueda por criterios
+    // Búsqueda por criterios
     filtered = [...allRecipes];
 
     // Filtrar por ingredientes
@@ -247,7 +247,9 @@ export default function HomePage() {
   };
 
   const handleViewRecipe = async (recipe: Recipe) => {
-    navigate(`/recipe/${encodeURIComponent(recipe.name)}`);
+    navigate(`/recipe/${encodeURIComponent(recipe.name)}`, {
+      state: { fromHomePage: true },
+    });
   };
 
   return (
@@ -258,22 +260,6 @@ export default function HomePage() {
 
       <Card sx={{ p: 3, mb: 3 }}>
         <Stack spacing={3}>
-          <FormControl fullWidth>
-            <InputLabel>{t("home.selectRecipe")}</InputLabel>
-            <Select
-              value={selectedRecipeName}
-              onChange={(e) => setSelectedRecipeName(e.target.value)}
-              label={t("home.selectRecipe")}
-            >
-              <MenuItem value="">-- {t("home.selectRecipe")} --</MenuItem>
-              {allRecipes.map((recipe) => (
-                <MenuItem key={recipe.name} value={recipe.name}>
-                  {recipe.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
           <FormControl fullWidth>
             <InputLabel>{t("home.selectCategory")}</InputLabel>
             <Select
@@ -326,7 +312,7 @@ export default function HomePage() {
             <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>
               {t("home.selectIngredients")}
             </Typography>
-            {allIngredients.length === 0 ? (
+            {availableIngredients.length === 0 ? (
               <Card>
                 <CardContent>
                   <Typography
@@ -351,7 +337,7 @@ export default function HomePage() {
                   overflowY: "auto",
                 }}
               >
-                {allIngredients.map((ingredient) => (
+                {availableIngredients.map((ingredient) => (
                   <FormControlLabel
                     key={ingredient.name}
                     control={

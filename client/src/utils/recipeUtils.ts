@@ -1,5 +1,5 @@
-import type { Recipe, ShoppingListItem, RecipeAvailability } from '../types';
-import { storage } from '../db/storage';
+import type { Recipe, ShoppingListItem, RecipeAvailability, InventoryIngredientMatch } from '../types';
+import { storage } from '../services/storage';
 
 /**
  * Comparar ingredientes de receta con inventario y generar lista de compra
@@ -9,6 +9,7 @@ export async function checkRecipeAvailability(
 ): Promise<RecipeAvailability> {
   const inventory = await storage.loadIngredients();
   const missingIngredients: ShoppingListItem[] = [];
+  const availableIngredients: InventoryIngredientMatch[] = [];
 
   for (const recipeIngredient of recipe.ingredients) {
     const normalizedRecipeName = normalizeIngredientName(recipeIngredient.name);
@@ -20,10 +21,27 @@ export async function checkRecipeAvailability(
              normalizedRecipeName.includes(normalizedInvName);
     });
 
-    if (!found) {
+    // Verificar si el ingrediente está disponible:
+    // 1. Debe estar en el inventario
+    // 2. Su measure debe estar definido (no undefined, null o string vacío)
+    // 3. Su measure no debe ser "0"
+    const isAvailable = found && 
+                       found.measure !== undefined && 
+                       found.measure !== null && 
+                       found.measure.trim() !== "" && 
+                       found.measure.trim() !== "0";
+
+    if (!isAvailable) {
       missingIngredients.push({
         name: recipeIngredient.name,
         measure: recipeIngredient.measure,
+      });
+    } else {
+      // Ingrediente encontrado en inventario y disponible - agregar a la lista de disponibles
+      availableIngredients.push({
+        recipeIngredientName: recipeIngredient.name,
+        recipeIngredientMeasure: recipeIngredient.measure,
+        inventoryIngredient: found,
       });
     }
   }
@@ -40,6 +58,7 @@ export async function checkRecipeAvailability(
   return {
     recipe,
     missingIngredients,
+    availableIngredients,
     availabilityStatus,
   };
 }
@@ -57,6 +76,7 @@ function normalizeIngredientName(name: string): string {
 
 /**
  * Filtrar recetas por ingredientes seleccionados
+ * Solo devuelve recetas que contengan TODOS los ingredientes seleccionados
  */
 export function filterRecipesByIngredients(
   recipes: Recipe[],
@@ -67,16 +87,25 @@ export function filterRecipesByIngredients(
   }
 
   return recipes.filter(recipe => {
+    // Normalizar todos los nombres de ingredientes de la receta
     const recipeIngredientNames = recipe.ingredients.map(ing =>
       normalizeIngredientName(ing.name)
     );
     
+    // Verificar que TODOS los ingredientes seleccionados estén en la receta
     return selectedIngredients.every(selected => {
       const normalizedSelected = normalizeIngredientName(selected);
-      return recipeIngredientNames.some(recipeIng =>
-        recipeIng.includes(normalizedSelected) ||
-        normalizedSelected.includes(recipeIng)
-      );
+      
+      // Buscar coincidencia exacta o parcial (bidireccional)
+      return recipeIngredientNames.some(recipeIng => {
+        // Comparación exacta
+        if (recipeIng === normalizedSelected) {
+          return true;
+        }
+        // Comparación parcial bidireccional
+        return recipeIng.includes(normalizedSelected) ||
+               normalizedSelected.includes(recipeIng);
+      });
     });
   });
 }

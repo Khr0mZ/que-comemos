@@ -1,12 +1,15 @@
+import { UserButton, useUser } from "@clerk/clerk-react";
 import {
   Avatar,
   BottomNavigation,
   BottomNavigationAction,
   Box,
+  Button,
+  Fade,
   Paper,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useRandomBackground } from "../hooks/useRandomBackground";
 import i18n from "../i18n/config";
 
@@ -87,14 +90,28 @@ const LanguageButton = ({
 );
 
 export default function Layout({ children }: LayoutProps) {
-  const { i18n: i18nHook } = useTranslation();
+  const { i18n: i18nHook, t } = useTranslation();
+  const { user, isLoaded } = useUser();
   const location = useLocation();
+  const navigate = useNavigate();
   const currentLanguage = i18nHook.language || "es";
   const backgroundImage = useRandomBackground();
 
+  // Proteger rutas: redirigir a auth si no está autenticado
+  // (solo la página de autenticación es pública)
+  if (isLoaded && !user && location.pathname !== "/auth") {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const isRecipeDetailPage =
+    location.pathname.startsWith("/recipe/") || location.pathname === "/recipe";
+
   const getNavValue = () => {
     if (location.pathname === "/inventory") return 1;
-    if (location.pathname === "/recipes") return 2;
+    if (location.pathname === "/recipes" || isRecipeDetailPage) return 2;
+    if (location.pathname === "/shopping") return 3;
+    if (location.pathname === "/cooking") return 4;
+    if (location.pathname === "/week") return 5;
     return 0;
   };
 
@@ -191,8 +208,11 @@ export default function Layout({ children }: LayoutProps) {
               sx={{
                 flex: 1,
                 bgcolor: "transparent",
+                maxWidth: "calc(100vw - 32px)",
                 "& .MuiBottomNavigationAction-root": {
                   color: "rgba(16, 101, 230, 0.5)",
+                  minWidth: "auto",
+                  padding: "6px 4px",
                   "&.Mui-selected": {
                     color: "#1065E6",
                   },
@@ -217,8 +237,8 @@ export default function Layout({ children }: LayoutProps) {
                 slotProps={{
                   label: {
                     sx: {
-                      width: "36px",
-                      height: "36px",
+                      width: "30px",
+                      height: "30px",
                       transition: "all 0.3s ease",
                       "&.Mui-selected": {
                         width: "52px",
@@ -246,8 +266,89 @@ export default function Layout({ children }: LayoutProps) {
                 slotProps={{
                   label: {
                     sx: {
-                      width: "36px",
-                      height: "36px",
+                      width: "30px",
+                      height: "30px",
+                      transition: "all 0.3s ease",
+                      "&.Mui-selected": {
+                        width: "52px",
+                        height: "52px",
+                      },
+                    },
+                  },
+                }}
+              />
+              <BottomNavigationAction
+                disableRipple
+                label={
+                  <Box>
+                    <Fade in={!isRecipeDetailPage} mountOnEnter unmountOnExit>
+                      {!isRecipeDetailPage ? (
+                        <Avatar
+                          variant="square"
+                          src="/recipes.webp"
+                          alt="Recipes"
+                          sx={{
+                            width: "inherit",
+                            height: "inherit",
+                          }}
+                        />
+                      ) : (
+                        <Box />
+                      )}
+                    </Fade>
+                    <Fade in={isRecipeDetailPage} mountOnEnter unmountOnExit>
+                      {isRecipeDetailPage ? (
+                        <Avatar
+                          variant="square"
+                          src="/recipe.webp"
+                          alt="Recipe"
+                          sx={{
+                            width: "inherit",
+                            height: "inherit",
+                          }}
+                        />
+                      ) : (
+                        <Box />
+                      )}
+                    </Fade>
+                  </Box>
+                }
+                component={Link}
+                to="/recipes"
+                slotProps={{
+                  label: {
+                    sx: {
+                      width: "30px",
+                      height: "30px",
+                      transition: "all 0.3s ease",
+                      "&.Mui-selected": {
+                        width: isRecipeDetailPage ? "58px" : "52px",
+                        height: isRecipeDetailPage ? "40px" : "52px",
+                      },
+                    },
+                  },
+                }}
+              />
+              <BottomNavigationAction
+                disableRipple
+                label={
+                  <Avatar
+                    variant="square"
+                    src="/shopping.webp"
+                    alt="Shopping"
+                    sx={{
+                      width: "inherit",
+                      height: "inherit",
+                    }}
+                  />
+                }
+                component={Link}
+                to="/shopping"
+                slotProps={{
+                  label: {
+                    sx: {
+                      width: "30px",
+                      height: "30px",
                       transition: "all 0.3s ease",
                       "&.Mui-selected": {
                         width: "52px",
@@ -262,8 +363,8 @@ export default function Layout({ children }: LayoutProps) {
                 label={
                   <Avatar
                     variant="square"
-                    src="/recipes.webp"
-                    alt="Home"
+                    src="/cooking.webp"
+                    alt="Cooking"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -271,12 +372,41 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 }
                 component={Link}
-                to="/recipes"
+                to="/cooking"
                 slotProps={{
                   label: {
                     sx: {
-                      width: "36px",
-                      height: "36px",
+                      width: "30px",
+                      height: "30px",
+                      transition: "all 0.3s ease",
+                      "&.Mui-selected": {
+                        width: "52px",
+                        height: "52px",
+                      },
+                    },
+                  },
+                }}
+              />
+              <BottomNavigationAction
+                disableRipple
+                label={
+                  <Avatar
+                    variant="square"
+                    src="/calendar.webp"
+                    alt="Week"
+                    sx={{
+                      width: "inherit",
+                      height: "inherit",
+                    }}
+                  />
+                }
+                component={Link}
+                to="/week"
+                slotProps={{
+                  label: {
+                    sx: {
+                      width: "30px",
+                      height: "30px",
                       transition: "all 0.3s ease",
                       "&.Mui-selected": {
                         width: "52px",
@@ -293,8 +423,35 @@ export default function Layout({ children }: LayoutProps) {
                 flexDirection: "column",
                 gap: 0.5,
                 ml: 1,
+                alignItems: "center",
               }}
             >
+              {isLoaded && user ? (
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: {
+                        width: 32,
+                        height: 32,
+                      },
+                    },
+                  }}
+                />
+              ) : (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => navigate("/auth")}
+                  sx={{
+                    fontSize: "0.7rem",
+                    px: 1,
+                    py: 0.5,
+                    minWidth: "auto",
+                  }}
+                >
+                  {t("auth.signIn") || "Login"}
+                </Button>
+              )}
               <LanguageButton
                 lang="es"
                 flag={<SpanishFlag />}
@@ -443,10 +600,62 @@ export default function Layout({ children }: LayoutProps) {
               <BottomNavigationAction
                 disableRipple
                 label={
+                  <Box>
+                    <Fade in={!isRecipeDetailPage} mountOnEnter unmountOnExit>
+                      {!isRecipeDetailPage ? (
+                        <Avatar
+                          variant="square"
+                          src="/recipes.webp"
+                          alt="Recipes"
+                          sx={{
+                            width: "inherit",
+                            height: "inherit",
+                          }}
+                        />
+                      ) : (
+                        <Box />
+                      )}
+                    </Fade>
+                    <Fade in={isRecipeDetailPage} mountOnEnter unmountOnExit>
+                      {isRecipeDetailPage ? (
+                        <Avatar
+                          variant="square"
+                          src="/recipe.webp"
+                          alt="Recipe"
+                          sx={{
+                            width: "inherit",
+                            height: "inherit",
+                          }}
+                        />
+                      ) : (
+                        <Box />
+                      )}
+                    </Fade>
+                  </Box>
+                }
+                component={Link}
+                to="/recipes"
+                slotProps={{
+                  label: {
+                    sx: {
+                      width: "48px",
+                      height: "48px",
+                      transition: "all 0.3s ease",
+                      "&.Mui-selected": {
+                        width: isRecipeDetailPage ? "76px" : "70px",
+                        height: isRecipeDetailPage ? "54px" : "70px",
+                      },
+                    },
+                  },
+                }}
+              />
+              <BottomNavigationAction
+                disableRipple
+                label={
                   <Avatar
                     variant="square"
-                    src="/recipes.webp"
-                    alt="Home"
+                    src="/shopping.webp"
+                    alt="Shopping"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -454,7 +663,65 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 }
                 component={Link}
-                to="/recipes"
+                to="/shopping"
+                slotProps={{
+                  label: {
+                    sx: {
+                      width: "48px",
+                      height: "48px",
+                      transition: "all 0.3s ease",
+                      "&.Mui-selected": {
+                        width: "70px",
+                        height: "70px",
+                      },
+                    },
+                  },
+                }}
+              />
+              <BottomNavigationAction
+                disableRipple
+                label={
+                  <Avatar
+                    variant="square"
+                    src="/cooking.webp"
+                    alt="Cooking"
+                    sx={{
+                      width: "inherit",
+                      height: "inherit",
+                    }}
+                  />
+                }
+                component={Link}
+                to="/cooking"
+                slotProps={{
+                  label: {
+                    sx: {
+                      width: "48px",
+                      height: "48px",
+                      transition: "all 0.3s ease",
+                      "&.Mui-selected": {
+                        width: "70px",
+                        height: "70px",
+                      },
+                    },
+                  },
+                }}
+              />
+              <BottomNavigationAction
+                disableRipple
+                label={
+                  <Avatar
+                    variant="square"
+                    src="/calendar.webp"
+                    alt="Week"
+                    sx={{
+                      width: "inherit",
+                      height: "inherit",
+                    }}
+                  />
+                }
+                component={Link}
+                to="/week"
                 slotProps={{
                   label: {
                     sx: {
@@ -475,8 +742,33 @@ export default function Layout({ children }: LayoutProps) {
                 display: "flex",
                 gap: 0.5,
                 ml: 2,
+                alignItems: "center",
               }}
             >
+              {isLoaded && user ? (
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: {
+                        width: 40,
+                        height: 40,
+                      },
+                    },
+                  }}
+                />
+              ) : (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => navigate("/auth")}
+                  sx={{
+                    display: { xs: "none", sm: "flex" },
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {t("auth.signIn") || "Iniciar sesión"}
+                </Button>
+              )}
               <LanguageButton
                 lang="es"
                 flag={<SpanishFlag />}

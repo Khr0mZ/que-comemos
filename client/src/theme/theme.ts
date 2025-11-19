@@ -45,57 +45,57 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily:
-      '"Comfortaa", "Quicksand", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+      '"Patrick Hand", cursive, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
     h1: {
-      fontFamily: '"Quicksand", "Comfortaa", sans-serif',
-      fontWeight: 700,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
       fontSize: "2rem",
       letterSpacing: "-0.02em",
     },
     h2: {
-      fontFamily: '"Quicksand", "Comfortaa", sans-serif',
-      fontWeight: 600,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
       fontSize: "1.5rem",
       letterSpacing: "-0.01em",
     },
     h3: {
-      fontFamily: '"Comfortaa", sans-serif',
-      fontWeight: 600,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
       fontSize: "1.2rem",
     },
     h4: {
-      fontFamily: '"Comfortaa", sans-serif',
-      fontWeight: 600,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
     },
     h5: {
-      fontFamily: '"Comfortaa", sans-serif',
-      fontWeight: 600,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
     },
     h6: {
-      fontFamily: '"Comfortaa", sans-serif',
-      fontWeight: 600,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
     },
     body1: {
-      fontFamily: '"Comfortaa", sans-serif',
+      fontFamily: '"Patrick Hand", cursive',
       fontWeight: 400,
     },
     body2: {
-      fontFamily: '"Comfortaa", sans-serif',
+      fontFamily: '"Patrick Hand", cursive',
       fontWeight: 400,
     },
     button: {
-      fontFamily: '"Quicksand", "Comfortaa", sans-serif',
+      fontFamily: '"Patrick Hand", cursive',
       textTransform: "none",
-      fontWeight: 600,
+      fontWeight: 400,
       letterSpacing: "0.02em",
     },
     caption: {
-      fontFamily: '"Comfortaa", sans-serif',
+      fontFamily: '"Patrick Hand", cursive',
       fontWeight: 400,
     },
     overline: {
-      fontFamily: '"Comfortaa", sans-serif',
-      fontWeight: 600,
+      fontFamily: '"Patrick Hand", cursive',
+      fontWeight: 400,
     },
   },
   shape: {
@@ -105,10 +105,10 @@ export const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          fontFamily: '"Quicksand", "Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
           borderRadius: 16,
-          padding: "0.75rem 1.5rem",
-          fontWeight: 700,
+          padding: "0 1rem",
+          fontWeight: 400,
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
           textTransform: "none",
           fontSize: "1rem",
@@ -127,14 +127,14 @@ export const theme = createTheme({
           },
         },
         outlined: {
-          fontWeight: 700,
+          fontWeight: 400,
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
           borderRadius: 20,
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.12)",
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -150,11 +150,11 @@ export const theme = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
           "& .MuiOutlinedInput-root": {
             borderRadius: 16,
             backgroundColor: "#fff",
-            fontFamily: '"Comfortaa", sans-serif',
+            fontFamily: '"Patrick Hand", cursive',
             "&:hover fieldset": {
               borderColor: "#FFC107",
               borderWidth: 2,
@@ -165,7 +165,7 @@ export const theme = createTheme({
             },
           },
           "& .MuiInputLabel-root": {
-            fontFamily: '"Comfortaa", sans-serif',
+            fontFamily: '"Patrick Hand", cursive',
           },
         },
       },
@@ -173,9 +173,9 @@ export const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
           borderRadius: 20,
-          fontWeight: 600,
+          fontWeight: 400,
           fontSize: "0.875rem",
           padding: "4px 12px",
           height: "auto",
@@ -209,7 +209,7 @@ export const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          fontFamily: '"Quicksand", "Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
           borderRadius: 0,
           boxShadow: "none",
         },
@@ -218,43 +218,43 @@ export const theme = createTheme({
     MuiSelect: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
         },
       },
     },
     MuiMenuItem: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
         },
       },
     },
     MuiDialogTitle: {
       styleOverrides: {
         root: {
-          fontFamily: '"Quicksand", "Comfortaa", sans-serif',
-          fontWeight: 700,
+          fontFamily: '"Patrick Hand", cursive',
+          fontWeight: 400,
         },
       },
     },
     MuiFormControl: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
         },
       },
     },
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          fontFamily: '"Comfortaa", sans-serif',
+          fontFamily: '"Patrick Hand", cursive',
         },
       },
     },

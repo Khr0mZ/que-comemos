@@ -13,11 +13,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import IngredientDialog from "../components/IngredientDialog";
 import WarningDialog from "../components/WarningDialog";
+import ShoppingListDialog from "../components/ShoppingListDialog";
+import { useSnackbar } from "../hooks/useSnackbar";
 import {
+  deleteAllIngredients,
   deleteIngredient,
   saveIngredient,
   updateIngredient,
   useIngredients,
+  storage,
 } from "../hooks/useStorage";
 import type { Ingredient, IngredientCategory } from "../types";
 import {
@@ -29,6 +33,7 @@ import {
 
 export default function InventoryPage() {
   const { t } = useTranslation();
+  const { showSnackbar } = useSnackbar();
   const [searchQuery, setSearchQuery] = useState("");
   const [globalIngredients, setGlobalIngredients] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -39,6 +44,9 @@ export default function InventoryPage() {
   const [ingredientToDelete, setIngredientToDelete] = useState<string | null>(
     null
   );
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [shoppingListDialogOpen, setShoppingListDialogOpen] = useState(false);
+  const [ingredientForShoppingList, setIngredientForShoppingList] = useState<Ingredient | null>(null);
 
   const { ingredients: allIngredients } = useIngredients();
 
@@ -199,6 +207,34 @@ export default function InventoryPage() {
     setIngredientToDelete(null);
   }, []);
 
+  const handleDeleteAll = useCallback(() => {
+    setDeleteAllDialogOpen(true);
+  }, []);
+
+  const confirmDeleteAll = useCallback(async () => {
+    try {
+      await deleteAllIngredients();
+      showSnackbar(
+        t("inventory.allIngredientsDeleted") ||
+          "Todos los ingredientes han sido eliminados",
+        "success"
+      );
+      setDeleteAllDialogOpen(false);
+    } catch (error) {
+      console.error("Error deleting all ingredients:", error);
+      showSnackbar(
+        t("common.error") +
+          ": " +
+          (error instanceof Error ? error.message : "Error desconocido"),
+        "error"
+      );
+    }
+  }, [showSnackbar, t]);
+
+  const cancelDeleteAll = useCallback(() => {
+    setDeleteAllDialogOpen(false);
+  }, []);
+
   const handleEdit = (ingredient: Ingredient) => {
     setEditingIngredient(ingredient);
     setShowAddForm(true);
@@ -235,13 +271,30 @@ export default function InventoryPage() {
         <Typography variant="h2" component="h2" sx={{ color: "#333" }}>
           {t("inventory.title")}
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<span style={{ fontSize: "1.2rem" }}>➕</span>}
-          onClick={() => setShowAddForm(true)}
-        >
-          {t("inventory.addIngredient")}
-        </Button>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteAll}
+            disabled={allIngredients.length === 0}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <span style={{ fontSize: "1rem" }}>🗑️</span>
+            <Box sx={{ display: { xs: "none", md: "flex" } }}>
+              {t("inventory.deleteAllIngredients")}
+            </Box>
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setShowAddForm(true)}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <span style={{ fontSize: "1rem" }}>➕</span>
+            <Box sx={{ display: { xs: "none", md: "flex" } }}>
+              {t("inventory.addIngredient")}
+            </Box>
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ mb: 3 }}>
@@ -338,6 +391,17 @@ export default function InventoryPage() {
                   >
                     🗑️
                   </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setIngredientForShoppingList(ingredient);
+                      setShoppingListDialogOpen(true);
+                    }}
+                    sx={{ fontSize: "1.3rem" }}
+                    title={t("inventory.addToShoppingList") || "Agregar a lista de compra"}
+                  >
+                    🛒
+                  </IconButton>
                 </Box>
                 <Chip
                   label={t(`inventory.categories.${ingredient.category}`)}
@@ -359,6 +423,36 @@ export default function InventoryPage() {
         message={t("inventory.deleteMessage")}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
+      />
+
+      <WarningDialog
+        open={deleteAllDialogOpen}
+        title={t("inventory.deleteAllIngredients")}
+        message={t("inventory.deleteAllIngredientsMessage")}
+        onConfirm={confirmDeleteAll}
+        onCancel={cancelDeleteAll}
+      />
+
+      <ShoppingListDialog
+        open={shoppingListDialogOpen}
+        ingredient={ingredientForShoppingList}
+        onClose={() => {
+          setShoppingListDialogOpen(false);
+          setIngredientForShoppingList(null);
+        }}
+        onConfirm={async (measure) => {
+          if (ingredientForShoppingList) {
+            await storage.addGeneralShoppingItem({
+              name: ingredientForShoppingList.name,
+              measure: measure.trim(),
+            });
+            showSnackbar(
+              t("inventory.addedToShoppingList") ||
+                `${translateIngredient(ingredientForShoppingList.name)} agregado a la lista de compra`,
+              "success"
+            );
+          }
+        }}
       />
     </Container>
   );
