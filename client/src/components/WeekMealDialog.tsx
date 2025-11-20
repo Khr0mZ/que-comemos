@@ -152,20 +152,12 @@ export default function WeekMealDialog({
           }}
         >
           <Box>
-            <Button
-              onClick={handleClose}
-              variant="outlined"
-              startIcon={<span style={{ fontSize: "1rem" }}>❌</span>}
-            >
+            <Button onClick={handleClose} variant="outlined">
               {t("common.cancel")}
             </Button>
           </Box>
           <Box>
-            <Button
-              onClick={handleConfirm}
-              variant="contained"
-              startIcon={<span style={{ fontSize: "1rem" }}>✅</span>}
-            >
+            <Button onClick={handleConfirm} variant="contained">
               {t("common.confirm")}
             </Button>
           </Box>
@@ -174,4 +166,3 @@ export default function WeekMealDialog({
     </Dialog>
   );
 }
-

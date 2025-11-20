@@ -3,14 +3,15 @@ import { Box, Container, Tab, Tabs } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
-export default function AuthPage() {
+export default function Auth() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  
+
   // Derivar el tab directamente del parámetro en lugar de usar estado + efecto
-  const tab: "sign-in" | "sign-up" = (tabParam === "sign-up" ? "sign-up" : "sign-in");
-  
+  const tab: "sign-in" | "sign-up" =
+    tabParam === "sign-up" ? "sign-up" : "sign-in";
+
   const handleTabChange = (_: unknown, newValue: "sign-in" | "sign-up") => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (newValue === "sign-up") {
@@ -31,19 +32,9 @@ export default function AuthPage() {
           gap: 3,
         }}
       >
-        <Tabs
-          value={tab}
-          onChange={handleTabChange}
-          sx={{ mb: 2 }}
-        >
-          <Tab
-            label={t("auth.signIn") || "Iniciar sesión"}
-            value="sign-in"
-          />
-          <Tab
-            label={t("auth.signUp") || "Registrarse"}
-            value="sign-up"
-          />
+        <Tabs value={tab} onChange={handleTabChange} sx={{ mb: 2 }}>
+          <Tab label={t("auth.signIn") || "Iniciar sesión"} value="sign-in" />
+          <Tab label={t("auth.signUp") || "Registrarse"} value="sign-up" />
         </Tabs>
 
         <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
@@ -89,4 +80,3 @@ export default function AuthPage() {
     </Container>
   );
 }
-

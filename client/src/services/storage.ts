@@ -169,9 +169,9 @@ class JSONFileService {
    */
   async addIngredient(ingredient: Ingredient): Promise<Ingredient> {
     const ingredients = await this.loadIngredients();
-    // Verificar si ya existe un ingrediente con el mismo nombre
+    // Verificar si ya existe un ingrediente con el mismo id
     const existingIndex = ingredients.findIndex(
-      (ing) => ing.name === ingredient.name
+      (ing) => ing.id === ingredient.id
     );
     if (existingIndex !== -1) {
       // Si existe, actualizarlo en lugar de agregarlo
@@ -188,22 +188,22 @@ class JSONFileService {
   }
 
   /**
-   * Actualizar un ingrediente por nombre
+   * Actualizar un ingrediente por id
    */
   async updateIngredient(
-    name: string,
+    id: string,
     updates: Partial<Ingredient>
   ): Promise<void> {
     const ingredients = await this.loadIngredients();
-    // Buscar por nombre (case-insensitive para mayor robustez)
+    // Buscar por id
     const index = ingredients.findIndex(
-      (ing) => ing.name.toLowerCase() === name.toLowerCase()
+      (ing) => ing.id === id
     );
     if (index === -1) {
       // Si no existe, crear uno nuevo en lugar de lanzar error
       // Esto hace el método más robusto
       const newIngredient: Ingredient = {
-        name: updates.name || name,
+        id: updates.id || id,
         category: (updates.category || "other") as IngredientCategory,
         measure: updates.measure || "",
       };
@@ -218,11 +218,11 @@ class JSONFileService {
   }
 
   /**
-   * Eliminar un ingrediente por nombre
+   * Eliminar un ingrediente por id
    */
-  async deleteIngredient(name: string): Promise<void> {
+  async deleteIngredient(id: string): Promise<void> {
     const ingredients = await this.loadIngredients();
-    const filtered = ingredients.filter((ing) => ing.name !== name);
+    const filtered = ingredients.filter((ing) => ing.id !== id);
     await this.saveIngredients(filtered);
   }
 
@@ -599,9 +599,9 @@ class JSONFileService {
    */
   async addGeneralShoppingItem(item: ShoppingListItem): Promise<void> {
     const data = await this.loadShoppingList();
-    // Evitar duplicados
+    // Evitar duplicados por id
     const exists = data.generalItems.some(
-      (i) => i.name.toLowerCase() === item.name.toLowerCase()
+      (i) => i.id === item.id
     );
     if (!exists) {
       data.generalItems.push(item);
@@ -612,10 +612,10 @@ class JSONFileService {
   /**
    * Eliminar ingrediente de la lista general
    */
-  async removeGeneralShoppingItem(itemName: string): Promise<void> {
+  async removeGeneralShoppingItem(itemId: string): Promise<void> {
     const data = await this.loadShoppingList();
     data.generalItems = data.generalItems.filter(
-      (i) => i.name.toLowerCase() !== itemName.toLowerCase()
+      (i) => i.id !== itemId
     );
     await this.saveShoppingList(data);
   }
@@ -690,12 +690,12 @@ class JSONFileService {
    * Actualizar item en lista general
    */
   async updateGeneralShoppingItem(
-    itemName: string,
+    itemId: string,
     updates: Partial<ShoppingListItem>
   ): Promise<void> {
     const data = await this.loadShoppingList();
     const index = data.generalItems.findIndex(
-      (i) => i.name.toLowerCase() === itemName.toLowerCase()
+      (i) => i.id === itemId
     );
     if (index !== -1) {
       data.generalItems[index] = { ...data.generalItems[index], ...updates };

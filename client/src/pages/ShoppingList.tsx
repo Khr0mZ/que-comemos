@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Card,
   CardContent,
   Container,
@@ -13,21 +12,37 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import WarningDialog from "../components/WarningDialog";
-import { storage } from "../services/storage";
-import { useShoppingList, useIngredients, saveIngredient, useWeek } from "../hooks/useStorage";
-import { translateIngredient, findIngredientData } from "../utils/ingredientTranslations";
 import { useSnackbar } from "../hooks/useSnackbar";
-import type { ShoppingListItem, Ingredient } from "../types";
+import {
+  saveIngredient,
+  useIngredients,
+  useShoppingList,
+  useWeek,
+} from "../hooks/useStorage";
+import { storage } from "../services/storage";
+import type { Ingredient } from "../types";
+import {
+  getAllIngredients,
+} from "../utils/ingredientTranslations";
+import type { IngredientData } from "../utils/ingredientTranslations";
+import { getRandomColorFromString } from "../utils/colorUtils";
 
-export default function ShoppingPage() {
-  const { t } = useTranslation();
+export default function ShoppingList() {
+  const { t, i18n } = useTranslation();
   const { showSnackbar } = useSnackbar();
   const { shoppingList, refresh } = useShoppingList();
   const { refresh: refreshIngredients } = useIngredients();
   const { week } = useWeek();
-  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set());
+  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(
+    new Set()
+  );
   const [deleteRecipeDialogOpen, setDeleteRecipeDialogOpen] = useState(false);
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
+  const [allIngredientsData, setAllIngredientsData] = useState<IngredientData[]>([]);
+
+  useEffect(() => {
+    getAllIngredients().then(setAllIngredientsData);
+  }, []);
 
   // Contar cuántas veces aparece cada receta en la semana (solo las no completadas)
   const recipeCounts = useMemo(() => {
@@ -59,10 +74,11 @@ export default function ShoppingPage() {
 
   useEffect(() => {
     // Expandir todas las recetas por defecto
-    const allRecipeNames = new Set(shoppingList.recipeLists.map((list) => list.recipeName));
+    const allRecipeNames = new Set(
+      shoppingList.recipeLists.map((list) => list.recipeName)
+    );
     setExpandedRecipes(allRecipeNames);
   }, [shoppingList.recipeLists]);
-
 
   const toggleRecipe = (recipeName: string) => {
     setExpandedRecipes((prev) => {
@@ -76,8 +92,8 @@ export default function ShoppingPage() {
     });
   };
 
-  const handleRemoveGeneralItem = async (itemName: string) => {
-    await storage.removeGeneralShoppingItem(itemName);
+  const handleRemoveGeneralItem = async (itemId: string) => {
+    await storage.removeGeneralShoppingItem(itemId);
     refresh();
   };
 
@@ -116,25 +132,30 @@ export default function ShoppingPage() {
     setRecipeToDelete(null);
   }, []);
 
-  const handleRemoveRecipeItem = async (recipeName: string, itemName: string) => {
+  const handleRemoveRecipeItem = async (
+    recipeName: string,
+    itemId: string
+  ) => {
     const recipeList = shoppingList.recipeLists.find(
       (list) => list.recipeName === recipeName
     );
     if (recipeList) {
       // Encontrar el item que se va a eliminar para obtener su medida
       const itemToRemove = recipeList.items.find(
-        (item) => item.name.toLowerCase() === itemName.toLowerCase()
+        (item) => item.id === itemId
       );
 
       if (itemToRemove) {
         try {
-          // Buscar la categoría del ingrediente en la lista global
-          const ingredientData = await findIngredientData(itemToRemove.name);
+          // Buscar el ingrediente completo en la lista global por id
+          const ingredientData = allIngredientsData.find(
+            (g) => g.id === itemToRemove.id
+          );
           const category = ingredientData?.category || "other";
 
           // Agregar el ingrediente al inventario porque se compró
           const newIngredient: Ingredient = {
-            name: itemToRemove.name,
+            id: itemToRemove.id,
             category: category as Ingredient["category"],
             measure: itemToRemove.measure || "",
           };
@@ -142,15 +163,23 @@ export default function ShoppingPage() {
           await saveIngredient(newIngredient);
           await refreshIngredients();
 
+          const displayName = ingredientData
+            ? i18n.language === "en"
+              ? ingredientData.nameEN
+              : ingredientData.nameES
+            : itemToRemove.id;
+
           showSnackbar(
             t("shopping.ingredientAddedToInventory") ||
-              `${translateIngredient(itemToRemove.name)} agregado al inventario`,
+              `${displayName} agregado al inventario`,
             "success"
           );
         } catch (error) {
           console.error("Error adding ingredient to inventory:", error);
           showSnackbar(
-            t("common.error") + ": " + (error instanceof Error ? error.message : "Error desconocido"),
+            t("common.error") +
+              ": " +
+              (error instanceof Error ? error.message : "Error desconocido"),
             "error"
           );
         }
@@ -158,7 +187,7 @@ export default function ShoppingPage() {
 
       // Eliminar el item de la lista de compra
       const updatedItems = recipeList.items.filter(
-        (item) => item.name.toLowerCase() !== itemName.toLowerCase()
+        (item) => item.id !== itemId
       );
       // Mantener la lista de la receta incluso si no hay items faltantes
       // para que el usuario pueda gestionar los ingredientes del inventario
@@ -166,23 +195,6 @@ export default function ShoppingPage() {
       refresh();
     }
   };
-
-  const copyToClipboard = (items: ShoppingListItem[], title?: string) => {
-    const text = items
-      .map((item) => `${translateIngredient(item.name)}${item.measure ? ` - ${item.measure}` : ""}`)
-      .join("\n");
-    const fullText = title ? `${title}\n\n${text}` : text;
-
-    navigator.clipboard
-      .writeText(fullText)
-      .then(() => {
-        showSnackbar(t("shopping.copied") || "Copiado al portapapeles", "success");
-      })
-      .catch((error) => {
-        console.error("Error copying to clipboard:", error);
-      });
-  };
-
 
   const hasItems =
     shoppingList.generalItems.length > 0 || shoppingList.recipeLists.length > 0;
@@ -227,43 +239,51 @@ export default function ShoppingPage() {
                   <Typography variant="h6">
                     {t("shopping.generalItems") || "Ingredientes sin receta"}
                   </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => copyToClipboard(shoppingList.generalItems)}
-                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                  >
-                    <span style={{ fontSize: "1rem" }}>📋</span>
-                    <Box sx={{ display: { xs: "none", md: "flex" } }}>
-                      {t("shopping.copy") || "Copiar"}
-                    </Box>
-                  </Button>
                 </Box>
                 <List>
-                  {shoppingList.generalItems.map((item, idx) => (
-                    <ListItem
-                      key={idx}
-                      sx={{
-                        border: "1px solid",
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        mb: 1,
-                        bgcolor: "background.default",
-                      }}
-                    >
-                      <ListItemText
-                        primary={translateIngredient(item.name)}
-                        secondary={item.measure || t("shopping.noMeasure") || "Sin medida"}
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveGeneralItem(item.name)}
-                        sx={{ fontSize: "1.3rem" }}
+                  {shoppingList.generalItems.map((item, idx) => {
+                    const ingData = allIngredientsData.find((g) => g.id === item.id);
+                    const displayName = ingData
+                      ? i18n.language === "en"
+                        ? ingData.nameEN
+                        : ingData.nameES
+                      : item.id;
+                    const baseColor = getRandomColorFromString(item.id);
+                    
+                    return (
+                      <ListItem
+                        key={idx}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: baseColor,
+                          borderRadius: 1,
+                          mb: 1,
+                          bgcolor: baseColor,
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            boxShadow: `0 2px 8px ${baseColor}40`,
+                            transform: "translateY(-1px)",
+                          },
+                        }}
                       >
-                        🗑️
-                      </IconButton>
-                    </ListItem>
-                  ))}
+                        <ListItemText
+                          primary={displayName}
+                          secondary={
+                            item.measure ||
+                            t("shopping.noMeasure") ||
+                            "Sin medida"
+                          }
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveGeneralItem(item.id)}
+                          sx={{ fontSize: "1.3rem" }}
+                        >
+                          🗑️
+                        </IconButton>
+                      </ListItem>
+                    );
+                  })}
                 </List>
               </CardContent>
             </Card>
@@ -286,13 +306,17 @@ export default function ShoppingPage() {
                         mb: expandedRecipes.has(recipeList.recipeName) ? 2 : 0,
                       }}
                     >
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
                         <IconButton
                           size="small"
                           onClick={() => toggleRecipe(recipeList.recipeName)}
                           sx={{ fontSize: "1.2rem" }}
                         >
-                          {expandedRecipes.has(recipeList.recipeName) ? "▼" : "▶"}
+                          {expandedRecipes.has(recipeList.recipeName)
+                            ? "▼"
+                            : "▶"}
                         </IconButton>
                         <Typography variant="h6">
                           {recipeList.recipeName}
@@ -316,24 +340,16 @@ export default function ShoppingPage() {
                         </Typography>
                       </Box>
                       <Box sx={{ display: "flex", gap: 1 }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() =>
-                            copyToClipboard(recipeList.items, recipeList.recipeName)
-                          }
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <span style={{ fontSize: "1rem" }}>📋</span>
-                          <Box sx={{ display: { xs: "none", md: "flex" } }}>
-                            {t("shopping.copy") || "Copiar"}
-                          </Box>
-                        </Button>
                         <IconButton
                           size="small"
-                          onClick={() => handleRemoveRecipeList(recipeList.recipeName)}
+                          onClick={() =>
+                            handleRemoveRecipeList(recipeList.recipeName)
+                          }
                           sx={{ fontSize: "1.3rem" }}
-                          title={t("shopping.removeRecipe") || "Eliminar receta del carrito"}
+                          title={
+                            t("shopping.removeRecipe") ||
+                            "Eliminar receta del carrito"
+                          }
                         >
                           🗑️
                         </IconButton>
@@ -346,43 +362,75 @@ export default function ShoppingPage() {
                           {recipeList.items.length === 0 ? (
                             <ListItem>
                               <ListItemText
-                                primary={t("shopping.allItemsPurchased") || "Todos los ingredientes han sido comprados"}
-                                secondary={t("shopping.goToCooking") || "Ve a la página de Cocinar para gestionar el inventario y ver las instrucciones"}
+                                primary={
+                                  t("shopping.allItemsPurchased") ||
+                                  "Todos los ingredientes han sido comprados"
+                                }
+                                secondary={
+                                  t("shopping.goToCooking") ||
+                                  "Ve a la página de Cocinar para gestionar el inventario y ver las instrucciones"
+                                }
                               />
                             </ListItem>
                           ) : (
                             <>
                               <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                                  {t("home.missingIngredients") || "Ingredientes faltantes"}
+                                <Typography
+                                  variant="subtitle2"
+                                  sx={{ mb: 1, fontWeight: 600 }}
+                                >
+                                  {t("home.missingIngredients") ||
+                                    "Ingredientes faltantes"}
                                 </Typography>
                               </Box>
-                              {recipeList.items.map((item, idx) => (
-                                <ListItem
-                                  key={idx}
-                                  sx={{
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                    borderRadius: 1,
-                                    mb: 1,
-                                    bgcolor: "background.default",
-                                  }}
-                                >
-                                  <ListItemText
-                                    primary={translateIngredient(item.name)}
-                                    secondary={item.measure || t("shopping.noMeasure") || "Sin medida"}
-                                  />
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      handleRemoveRecipeItem(recipeList.recipeName, item.name)
-                                    }
-                                    sx={{ fontSize: "1.3rem" }}
+                              {recipeList.items.map((item, idx) => {
+                                const ingData = allIngredientsData.find((g) => g.id === item.id);
+                                const displayName = ingData
+                                  ? i18n.language === "en"
+                                    ? ingData.nameEN
+                                    : ingData.nameES
+                                  : item.id;
+                                const baseColor = getRandomColorFromString(item.id);
+                                
+                                return (
+                                  <ListItem
+                                    key={idx}
+                                    sx={{
+                                      border: "1px solid",
+                                      borderColor: baseColor,
+                                      borderRadius: 1,
+                                      mb: 1,
+                                      bgcolor: baseColor,
+                                      transition: "all 0.2s ease",
+                                      "&:hover": {
+                                        boxShadow: `0 2px 8px ${baseColor}40`,
+                                        transform: "translateY(-1px)",
+                                      },
+                                    }}
                                   >
-                                    🗑️
-                                  </IconButton>
-                                </ListItem>
-                              ))}
+                                    <ListItemText
+                                      primary={displayName}
+                                      secondary={
+                                        item.measure ||
+                                        t("shopping.noMeasure") ||
+                                        "Sin medida"
+                                      }
+                                    />
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        handleRemoveRecipeItem(
+                                          recipeList.recipeName,
+                                          item.id
+                                        )
+                                      }
+                                      sx={{ fontSize: "1.3rem" }}
+                                    >
+                                      🗑️
+                                    </IconButton>
+                                  </ListItem>
+                                );
+                              })}
                             </>
                           )}
                         </List>
@@ -413,4 +461,3 @@ export default function ShoppingPage() {
     </Container>
   );
 }
-

@@ -3,7 +3,9 @@ import i18n from "../i18n/config";
 import type { IngredientCategory } from "../types";
 
 export interface IngredientData {
-  name: string;
+  id: string;
+  nameEN: string;
+  nameES: string;
   category: IngredientCategory;
 }
 
@@ -44,43 +46,38 @@ export async function getAllIngredients(): Promise<IngredientData[]> {
 }
 
 /**
- * Carga solo los nombres de los ingredientes (para compatibilidad)
+ * Carga solo los nombres de los ingredientes en inglés (para compatibilidad)
  */
 export async function getAllIngredientNames(): Promise<string[]> {
   const ingredients = await getAllIngredients();
-  return ingredients.map((ing) => ing.name);
-}
-
-/**
- * Normaliza el nombre de un ingrediente para usar como clave de traducción
- */
-function normalizeIngredientKey(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9_]/g, "");
+  return ingredients.map((ing) => ing.nameEN);
 }
 
 /**
  * Traduce el nombre de un ingrediente al idioma actual
- * Si no hay traducción disponible, devuelve el nombre original
+ * Busca el ingrediente por nameEN en el cache y retorna nameEN o nameES según el idioma
+ * Si no se encuentra en el cache, retorna el nombre original
  */
 export function translateIngredient(ingredientName: string): string {
   if (!ingredientName || !ingredientName.trim()) {
     return ingredientName;
   }
   
-  const key = normalizeIngredientKey(ingredientName);
-  const translationKey = `ingredients.${key}`;
-  const translation = i18n.t(translationKey, { defaultValue: ingredientName });
+  const currentLang = i18n.language || "es";
   
-  // Si la traducción es igual a la clave, significa que no existe traducción
-  if (translation === translationKey) {
-    return ingredientName;
+  // Buscar el ingrediente por nameEN en el cache si está disponible
+  if (ingredientsCache) {
+    const found = ingredientsCache.find(
+      (ing) => ing.nameEN.toLowerCase().trim() === ingredientName.toLowerCase().trim()
+    );
+    if (found) {
+      return currentLang === "en" ? found.nameEN : found.nameES;
+    }
   }
   
-  return translation;
+  // Si no se encuentra en el cache, retornar el nombre original
+  // Esto puede pasar si el cache aún no se ha cargado o para ingredientes personalizados
+  return ingredientName;
 }
 
 /**
@@ -101,9 +98,13 @@ export async function findEnglishName(
   const translatedLower = translatedName.toLowerCase().trim();
 
   for (const ing of ingredients) {
-    const translated = translateIngredient(ing.name);
-    if (translated.toLowerCase().trim() === translatedLower) {
-      return ing.name;
+    // Buscar por nameES directamente
+    if (ing.nameES.toLowerCase().trim() === translatedLower) {
+      return ing.nameEN;
+    }
+    // También buscar por nameEN por compatibilidad
+    if (ing.nameEN.toLowerCase().trim() === translatedLower) {
+      return ing.nameEN;
     }
   }
 
@@ -111,8 +112,8 @@ export async function findEnglishName(
 }
 
 /**
- * Busca un ingrediente completo (nombre y categoría) a partir de su nombre en inglés
- * @param ingredientName Nombre del ingrediente en inglés
+ * Busca un ingrediente completo (nombre y categoría) a partir de su nombre en inglés o español
+ * @param ingredientName Nombre del ingrediente en inglés o español
  * @returns El objeto IngredientData si se encuentra, null si no
  */
 export async function findIngredientData(
@@ -126,7 +127,9 @@ export async function findIngredientData(
   const nameLower = ingredientName.toLowerCase().trim();
 
   const found = ingredients.find(
-    (ing) => ing.name.toLowerCase().trim() === nameLower
+    (ing) => 
+      ing.nameEN.toLowerCase().trim() === nameLower ||
+      ing.nameES.toLowerCase().trim() === nameLower
   );
 
   return found || null;

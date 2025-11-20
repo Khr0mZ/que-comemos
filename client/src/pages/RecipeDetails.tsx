@@ -21,10 +21,10 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import WeekMealDialog from "../components/WeekMealDialog";
 import areasData from "../data/recipes/areas.json";
 import categoriesData from "../data/recipes/categories.json";
 import tagsData from "../data/recipes/tags.json";
-import WeekMealDialog from "../components/WeekMealDialog";
 import { useSnackbar } from "../hooks/useSnackbar";
 import {
   addRecipeToWeek,
@@ -35,15 +35,20 @@ import {
 } from "../hooks/useStorage";
 import type { DayOfWeek, MealType, Recipe, RecipeIngredient } from "../types";
 import {
-  getAllIngredientNames,
-  translateIngredient,
+  getAutocompleteColorStyles,
+  getTextFieldColorStyles,
+} from "../utils/colorUtils";
+import type { IngredientData } from "../utils/ingredientTranslations";
+import {
+  getAllIngredients,
+  normalizeSearchText,
 } from "../utils/ingredientTranslations";
 import {
   checkRecipeAvailability,
   getYouTubeEmbedUrl,
 } from "../utils/recipeUtils";
 
-export default function RecipeDetailPage() {
+export default function RecipeDetails() {
   const { t, i18n } = useTranslation();
   const { showSnackbar } = useSnackbar();
   const params = useParams<{ id?: string }>();
@@ -76,42 +81,47 @@ export default function RecipeDetailPage() {
   const tags = tagsData as string[];
   const { ingredients: userIngredients } = useIngredients();
   const [allIngredientNames, setAllIngredientNames] = useState<string[]>([]);
+  const [allIngredientsData, setAllIngredientsData] = useState<
+    IngredientData[]
+  >([]);
+  const [ingredientInputValues, setIngredientInputValues] = useState<
+    Record<number, string>
+  >({});
 
-  // Cargar nombres de ingredientes (globales + del usuario, sin duplicados)
+  // Cargar ids de ingredientes (globales + del usuario, sin duplicados)
   useEffect(() => {
     const loadIngredients = async () => {
-      const globalNames = await getAllIngredientNames();
-      const userNames = userIngredients.map((ing) => ing.name);
+      const globalIngredients = await getAllIngredients();
+      setAllIngredientsData(globalIngredients);
+      const globalIds = globalIngredients.map((ing) => ing.id);
+      const userIds = userIngredients.map((ing) => ing.id);
 
-      // Combinar y eliminar duplicados por nombre en inglés (case-insensitive)
-      const allNames = [...globalNames, ...userNames];
-      const seenLower = new Set<string>();
-      const uniqueNames: string[] = [];
+      // Combinar y eliminar duplicados por id
+      const allIds = [...globalIds, ...userIds];
+      const uniqueIds = Array.from(new Set(allIds));
 
-      for (const name of allNames) {
-        const lowerName = name.toLowerCase();
-        if (!seenLower.has(lowerName)) {
-          seenLower.add(lowerName);
-          uniqueNames.push(name);
-        }
-      }
+      // Ordenar alfabéticamente según el idioma actual
+      const currentLang = i18n.language || "es";
+      const sortedIds = [...uniqueIds].sort((a, b) => {
+        const ingA = globalIngredients.find((g) => g.id === a);
+        const ingB = globalIngredients.find((g) => g.id === b);
 
-      // También eliminar duplicados por traducción (si dos ingredientes diferentes se traducen igual)
-      const seenTranslations = new Set<string>();
-      const finalNames: string[] = [];
+        if (!ingA || !ingB) return 0;
 
-      for (const name of uniqueNames) {
-        const translation = translateIngredient(name).toLowerCase();
-        if (!seenTranslations.has(translation)) {
-          seenTranslations.add(translation);
-          finalNames.push(name);
-        }
-      }
+        const nameA = currentLang === "en" ? ingA.nameEN : ingA.nameES;
+        const nameB = currentLang === "en" ? ingB.nameEN : ingB.nameES;
 
-      setAllIngredientNames(finalNames);
+        return normalizeSearchText(nameA).localeCompare(
+          normalizeSearchText(nameB),
+          currentLang,
+          { sensitivity: "base" }
+        );
+      });
+
+      setAllIngredientNames(sortedIds); // Mantener el nombre de la variable por compatibilidad
     };
     loadIngredients();
-  }, [userIngredients]);
+  }, [userIngredients, i18n.language]);
 
   // Función helper para obtener las instrucciones según el idioma actual
   const getInstructions = (recipe: Recipe | null): string => {
@@ -305,7 +315,7 @@ export default function RecipeDetailPage() {
   const addIngredient = () => {
     setFormData({
       ...formData,
-      ingredients: [...formData.ingredients, { name: "", measure: "" }],
+      ingredients: [...formData.ingredients, { id: "", measure: "" }],
     });
   };
 
@@ -332,7 +342,10 @@ export default function RecipeDetailPage() {
     setWeekDialogOpen(true);
   };
 
-  const handleWeekDialogConfirm = async (day: DayOfWeek, mealType: MealType) => {
+  const handleWeekDialogConfirm = async (
+    day: DayOfWeek,
+    mealType: MealType
+  ) => {
     if (!recipe) return;
 
     try {
@@ -396,39 +409,32 @@ export default function RecipeDetailPage() {
           mb: 2,
         }}
       >
-        <Button
-          variant="outlined"
-          startIcon={<span style={{ fontSize: "1.2rem" }}>⬅️</span>}
-          onClick={() => navigate(-1)}
-        >
+        <Button variant="outlined" onClick={() => navigate(-1)}>
           {t("common.back")}
         </Button>
-        {canEdit && !isEditing && !isNewRecipe && !location.state?.fromHomePage && (
-          <Button
-            variant="contained"
-            startIcon={<span style={{ fontSize: "1.2rem" }}>✏️</span>}
-            onClick={handleEdit}
-          >
-            {t("recipes.editRecipe")}
-          </Button>
+        {!isEditing && !isNewRecipe && (canEdit || availability) && (
+          <Stack direction="row" spacing={1}>
+            {canEdit && (
+              <Button variant="contained" onClick={handleEdit}>
+                {t("recipes.editRecipe")}
+              </Button>
+            )}
+            {availability && (
+              <Button variant="contained" onClick={handleConfirmRecipe}>
+                {t("home.confirmRecipe") || "Confirmar Receta"}
+              </Button>
+            )}
+          </Stack>
         )}
         {isNewRecipe && (
           <Typography variant="h5">{t("recipes.addRecipe")}</Typography>
         )}
         {isEditing && (
           <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              onClick={handleCancelEdit}
-              startIcon={<span style={{ fontSize: "1.2rem" }}>❌</span>}
-            >
+            <Button variant="outlined" onClick={handleCancelEdit}>
               {t("common.cancel")}
             </Button>
-            <Button
-              variant="contained"
-              onClick={handleSaveEdit}
-              startIcon={<span style={{ fontSize: "1.2rem" }}>💾</span>}
-            >
+            <Button variant="contained" onClick={handleSaveEdit}>
               {t("common.save")}
             </Button>
           </Stack>
@@ -455,6 +461,7 @@ export default function RecipeDetailPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
+                    sx={getTextFieldColorStyles("recipes.titleLabel")}
                   />
                   <Autocomplete
                     options={categories}
@@ -465,6 +472,24 @@ export default function RecipeDetailPage() {
                     getOptionLabel={(option) =>
                       t(`categories.${option}`, { defaultValue: option })
                     }
+                    sx={getAutocompleteColorStyles("recipes.category")}
+                    slotProps={{
+                      popper: {
+                        sx: {
+                          maxWidth: "100%",
+                          "& .MuiAutocomplete-listbox": {
+                            maxWidth: "100%",
+                            overflowX: "hidden",
+                          },
+                        },
+                      },
+                      paper: {
+                        sx: {
+                          maxWidth: "100%",
+                          overflowX: "hidden",
+                        },
+                      },
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -482,6 +507,24 @@ export default function RecipeDetailPage() {
                     getOptionLabel={(option) =>
                       t(`areas.${option}`, { defaultValue: option })
                     }
+                    sx={getAutocompleteColorStyles("recipes.area")}
+                    slotProps={{
+                      popper: {
+                        sx: {
+                          maxWidth: "100%",
+                          "& .MuiAutocomplete-listbox": {
+                            maxWidth: "100%",
+                            overflowX: "hidden",
+                          },
+                        },
+                      },
+                      paper: {
+                        sx: {
+                          maxWidth: "100%",
+                          overflowX: "hidden",
+                        },
+                      },
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -500,7 +543,25 @@ export default function RecipeDetailPage() {
                     getOptionLabel={(option) =>
                       t(`tags.${option}`, { defaultValue: option })
                     }
-                    renderTags={(value, getTagProps) =>
+                    sx={getAutocompleteColorStyles("recipes.tagsLabel")}
+                    slotProps={{
+                      popper: {
+                        sx: {
+                          maxWidth: "100%",
+                          "& .MuiAutocomplete-listbox": {
+                            maxWidth: "100%",
+                            overflowX: "hidden",
+                          },
+                        },
+                      },
+                      paper: {
+                        sx: {
+                          maxWidth: "100%",
+                          overflowX: "hidden",
+                        },
+                      },
+                    }}
+                    renderValue={(value, getTagProps) =>
                       value.map((option, index) => (
                         <Chip
                           label={t(`tags.${option}`, { defaultValue: option })}
@@ -525,6 +586,7 @@ export default function RecipeDetailPage() {
                       setFormData({ ...formData, sourceURL: e.target.value })
                     }
                     placeholder="https://ejemplo.com/receta"
+                    sx={getTextFieldColorStyles("recipes.sourceUrl")}
                   />
                 </Stack>
               </Box>
@@ -574,6 +636,7 @@ export default function RecipeDetailPage() {
                       setFormData({ ...formData, imageURL: e.target.value })
                     }
                     placeholder="https://ejemplo.com/imagen.jpg"
+                    sx={getTextFieldColorStyles("recipes.imageUrl")}
                   />
                   <TextField
                     fullWidth
@@ -583,6 +646,7 @@ export default function RecipeDetailPage() {
                       setFormData({ ...formData, videoURL: e.target.value })
                     }
                     placeholder="https://www.youtube.com/watch?v=..."
+                    sx={getTextFieldColorStyles("recipes.videoUrl")}
                   />
                 </Stack>
               </Box>
@@ -642,7 +706,6 @@ export default function RecipeDetailPage() {
                     <Button
                       variant="contained"
                       onClick={() => setShowVideo(!showVideo)}
-                      startIcon={<span style={{ fontSize: "1.2rem" }}>🎥</span>}
                     >
                       {showVideo
                         ? t("recipes.hideVideo")
@@ -655,7 +718,6 @@ export default function RecipeDetailPage() {
                       href={displaySourceURL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      startIcon={<span style={{ fontSize: "1.2rem" }}>🔗</span>}
                     >
                       {t("recipes.viewSource")}
                     </Button>
@@ -703,23 +765,6 @@ export default function RecipeDetailPage() {
             </CardContent>
           </Card>
         </Collapse>
-      )}
-
-      {!isEditing && availability && location.state?.fromHomePage && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={handleConfirmRecipe}
-                startIcon={<span style={{ fontSize: "1.2rem" }}>✓</span>}
-              >
-                {t("home.confirmRecipe") || "Confirmar Receta"}
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
       )}
 
       <Box
@@ -773,44 +818,187 @@ export default function RecipeDetailPage() {
                       alignItems="center"
                     >
                       <Autocomplete
-                        freeSolo
                         options={allIngredientNames}
-                        value={ing.name || null}
+                        value={ing.id || null}
                         onChange={(_, newValue) => {
-                          // Cuando se selecciona una opción, newValue es el nombre en inglés
-                          updateIngredient(index, "name", newValue || "");
+                          // Cuando se selecciona una opción, newValue es el id
+                          updateIngredient(index, "id", newValue || "");
+                          // Limpiar el estado del input cuando se selecciona
+                          setIngredientInputValues((prev) => {
+                            const newValues = { ...prev };
+                            delete newValues[index];
+                            return newValues;
+                          });
                         }}
                         getOptionLabel={(option) => {
                           if (typeof option === "string") {
-                            return translateIngredient(option);
+                            const ingData = allIngredientsData.find(
+                              (g) => g.id === option
+                            );
+                            if (ingData) {
+                              return i18n.language === "en"
+                                ? ingData.nameEN
+                                : ingData.nameES;
+                            }
+                            return option;
                           }
                           return "";
                         }}
+                        filterOptions={(options, { inputValue }) => {
+                          const currentLang = i18n.language || "es";
+
+                          // Filtrar opciones basándose SOLO en el idioma seleccionado (igual que IngredientList)
+                          if (!inputValue || !inputValue.trim()) {
+                            // Cuando no hay input, devolver las opciones ordenadas
+                            return [...options].sort((a, b) => {
+                              const ingDataA = allIngredientsData.find(
+                                (g) => g.id === a
+                              );
+                              const ingDataB = allIngredientsData.find(
+                                (g) => g.id === b
+                              );
+                              if (!ingDataA || !ingDataB) return 0;
+
+                              const nameA =
+                                currentLang === "en"
+                                  ? ingDataA.nameEN
+                                  : ingDataA.nameES;
+                              const nameB =
+                                currentLang === "en"
+                                  ? ingDataB.nameEN
+                                  : ingDataB.nameES;
+
+                              return normalizeSearchText(nameA).localeCompare(
+                                normalizeSearchText(nameB),
+                                currentLang,
+                                { sensitivity: "base" }
+                              );
+                            });
+                          }
+
+                          const normalizedSearch =
+                            normalizeSearchText(inputValue);
+
+                          // Filtrar solo por el nombre del idioma actual usando normalizeSearchText
+                          const filtered = options.filter((optionId) => {
+                            const ingData = allIngredientsData.find(
+                              (g) => g.id === optionId
+                            );
+                            if (!ingData) return false;
+
+                            // Solo buscar en el nombre del idioma actual (igual que IngredientList)
+                            const nameInCurrentLang =
+                              currentLang === "en"
+                                ? ingData.nameEN
+                                : ingData.nameES;
+                            const normalizedTranslated =
+                              normalizeSearchText(nameInCurrentLang);
+
+                            // Buscar al inicio del nombre completo o al inicio de cualquier palabra (igual que IngredientList)
+                            const words = normalizedTranslated.split(/\s+/);
+                            const matchesTranslation =
+                              normalizedTranslated.startsWith(
+                                normalizedSearch
+                              ) ||
+                              words.some((word) =>
+                                word.startsWith(normalizedSearch)
+                              );
+
+                            return matchesTranslation;
+                          });
+
+                          // Ordenar alfabéticamente por el nombre del idioma actual
+                          return filtered.sort((a, b) => {
+                            const ingDataA = allIngredientsData.find(
+                              (g) => g.id === a
+                            );
+                            const ingDataB = allIngredientsData.find(
+                              (g) => g.id === b
+                            );
+                            if (!ingDataA || !ingDataB) return 0;
+
+                            const nameA =
+                              currentLang === "en"
+                                ? ingDataA.nameEN
+                                : ingDataA.nameES;
+                            const nameB =
+                              currentLang === "en"
+                                ? ingDataB.nameEN
+                                : ingDataB.nameES;
+
+                            return normalizeSearchText(nameA).localeCompare(
+                              normalizeSearchText(nameB),
+                              currentLang,
+                              { sensitivity: "base" }
+                            );
+                          });
+                        }}
                         isOptionEqualToValue={(option, value) => {
-                          // Comparar por nombre en inglés (no por traducción)
+                          // Comparar por id
                           return option === value;
                         }}
                         inputValue={
-                          ing.name ? translateIngredient(ing.name) : ""
+                          ingredientInputValues[index] !== undefined
+                            ? ingredientInputValues[index]
+                            : ing.id
+                            ? (() => {
+                                const ingData = allIngredientsData.find(
+                                  (g) => g.id === ing.id
+                                );
+                                return ingData
+                                  ? i18n.language === "en"
+                                    ? ingData.nameEN
+                                    : ingData.nameES
+                                  : ing.id;
+                              })()
+                            : ""
                         }
                         onInputChange={(_, newInputValue, reason) => {
-                          // Solo actualizar cuando el usuario está escribiendo (no cuando se selecciona)
-                          if (reason === "input") {
-                            // Buscar si hay un ingrediente que coincida con la traducción escrita
-                            const found = allIngredientNames.find(
-                              (name) =>
-                                translateIngredient(name).toLowerCase() ===
-                                newInputValue.toLowerCase()
-                            );
-                            if (found) {
-                              updateIngredient(index, "name", found);
-                            } else if (newInputValue === "") {
-                              updateIngredient(index, "name", "");
-                            } else {
-                              // Si no se encuentra, usar el texto ingresado directamente (ingrediente personalizado)
-                              updateIngredient(index, "name", newInputValue);
-                            }
+                          // Actualizar el estado del input para permitir escribir y filtrar
+                          setIngredientInputValues((prev) => ({
+                            ...prev,
+                            [index]: newInputValue,
+                          }));
+
+                          if (reason === "clear") {
+                            // Cuando se limpia el campo
+                            updateIngredient(index, "id", "");
+                            setIngredientInputValues((prev) => {
+                              const newValues = { ...prev };
+                              delete newValues[index];
+                              return newValues;
+                            });
+                          } else if (reason === "reset") {
+                            // Cuando se resetea, limpiar el estado del input
+                            setIngredientInputValues((prev) => {
+                              const newValues = { ...prev };
+                              delete newValues[index];
+                              return newValues;
+                            });
                           }
+                        }}
+                        sx={{
+                          flex: 2,
+                          ...getAutocompleteColorStyles(
+                            `recipes.ingredientName-${index}`
+                          ),
+                        }}
+                        slotProps={{
+                          popper: {
+                            sx: {
+                              maxWidth: "100%",
+                              "& .MuiAutocomplete-listbox": {
+                                maxWidth: "100%",
+                                overflowX: "hidden",
+                              },
+                            },
+                          },
+                          paper: {
+                            sx: {
+                              maxWidth: "100%",
+                              overflowX: "hidden",
+                            },
+                          },
                         }}
                         renderInput={(params) => (
                           <TextField
@@ -819,9 +1007,59 @@ export default function RecipeDetailPage() {
                             placeholder={t("recipes.ingredientName")}
                             size="small"
                             sx={{ flex: 2 }}
+                            onBlur={(e) => {
+                              const inputValue = e.target.value;
+                              if (!inputValue || !inputValue.trim()) {
+                                return;
+                              }
+
+                              const currentLang = i18n.language || "es";
+                              const normalizedSearch =
+                                normalizeSearchText(inputValue);
+
+                              // Buscar el ingrediente más aproximado
+                              // Prioridad: 1) Coincidencia exacta, 2) Empieza con, 3) Contiene
+                              let bestMatch: IngredientData | null = null;
+                              let bestScore = 0;
+
+                              for (const ingData of allIngredientsData) {
+                                const nameInCurrentLang =
+                                  currentLang === "en"
+                                    ? ingData.nameEN
+                                    : ingData.nameES;
+                                const normalizedName =
+                                  normalizeSearchText(nameInCurrentLang);
+
+                                let score = 0;
+                                if (normalizedName === normalizedSearch) {
+                                  score = 3; // Coincidencia exacta
+                                } else if (
+                                  normalizedName.startsWith(normalizedSearch)
+                                ) {
+                                  score = 2; // Empieza con
+                                } else if (
+                                  normalizedName.includes(normalizedSearch)
+                                ) {
+                                  score = 1; // Contiene
+                                }
+
+                                if (score > bestScore) {
+                                  bestScore = score;
+                                  bestMatch = ingData;
+                                }
+                              }
+
+                              if (bestMatch && bestScore > 0) {
+                                updateIngredient(index, "id", bestMatch.id);
+                                setIngredientInputValues((prev) => {
+                                  const newValues = { ...prev };
+                                  delete newValues[index];
+                                  return newValues;
+                                });
+                              }
+                            }}
                           />
                         )}
-                        sx={{ flex: 2 }}
                         size="small"
                       />
                       <TextField
@@ -831,11 +1069,34 @@ export default function RecipeDetailPage() {
                         onChange={(e) =>
                           updateIngredient(index, "measure", e.target.value)
                         }
-                        sx={{ flex: 1 }}
+                        sx={{
+                          flex: 1,
+                          ...getTextFieldColorStyles(
+                            `recipes.ingredientMeasure-${index}`
+                          ),
+                        }}
                         size="small"
                       />
                       <IconButton
-                        onClick={() => removeIngredient(index)}
+                        onClick={() => {
+                          removeIngredient(index);
+                          // Limpiar el estado del input cuando se elimina el ingrediente
+                          setIngredientInputValues((prev) => {
+                            const newValues = { ...prev };
+                            delete newValues[index];
+                            // Reindexar los valores después de eliminar
+                            const reindexed: Record<number, string> = {};
+                            Object.keys(newValues).forEach((key) => {
+                              const keyNum = parseInt(key);
+                              if (keyNum < index) {
+                                reindexed[keyNum] = newValues[keyNum];
+                              } else if (keyNum > index) {
+                                reindexed[keyNum - 1] = newValues[keyNum];
+                              }
+                            });
+                            return reindexed;
+                          });
+                        }}
                         size="small"
                         sx={{ fontSize: "1.3rem" }}
                       >
@@ -852,12 +1113,19 @@ export default function RecipeDetailPage() {
                 </Typography>
                 <List key={`ingredients-${i18n.language}`}>
                   {displayRecipe?.ingredients.map((ingredient, idx) => {
-                    // Traducir el ingrediente usando la función de traducción
-                    const translatedName = translateIngredient(ingredient.name);
+                    // Buscar el ingrediente completo por id
+                    const ingData = allIngredientsData.find(
+                      (g) => g.id === ingredient.id
+                    );
+                    const displayName = ingData
+                      ? i18n.language === "en"
+                        ? ingData.nameEN
+                        : ingData.nameES
+                      : ingredient.id;
                     return (
                       <ListItem key={idx}>
                         <ListItemText
-                          primary={translatedName}
+                          primary={displayName}
                           secondary={ingredient.measure}
                         />
                       </ListItem>
@@ -901,6 +1169,7 @@ export default function RecipeDetailPage() {
                   }
                 }}
                 placeholder={t("recipes.instructionsLabel")}
+                sx={getTextFieldColorStyles("recipes.instructionsLabel")}
               />
             ) : (
               <Box
@@ -938,11 +1207,7 @@ export default function RecipeDetailPage() {
 
       {!isEditing && recipe && recipe.source === "ai" && (
         <Box sx={{ mt: 3, display: "flex", justifyContent: "center" }}>
-          <Button
-            variant="contained"
-            startIcon={<span style={{ fontSize: "1.2rem" }}>💾</span>}
-            onClick={handleSave}
-          >
+          <Button variant="contained" onClick={handleSave}>
             {t("recipes.saveRecipe")}
           </Button>
         </Box>

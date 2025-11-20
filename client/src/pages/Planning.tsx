@@ -17,14 +17,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import WarningDialog from "../components/WarningDialog";
 import { useSnackbar } from "../hooks/useSnackbar";
-import {
-  clearWeek,
-  removeRecipeFromWeek,
-  useWeek,
-} from "../hooks/useStorage";
+import { clearWeek, removeRecipeFromWeek, useWeek } from "../hooks/useStorage";
 import type { DayOfWeek, MealType } from "../types";
 
-export default function WeekPage() {
+export default function Planning() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
@@ -77,7 +73,9 @@ export default function WeekPage() {
     } catch (error) {
       console.error("Error removing recipe:", error);
       showSnackbar(
-        t("common.error") + ": " + (error instanceof Error ? error.message : ""),
+        t("common.error") +
+          ": " +
+          (error instanceof Error ? error.message : ""),
         "error"
       );
     } finally {
@@ -105,7 +103,9 @@ export default function WeekPage() {
     } catch (error) {
       console.error("Error clearing week:", error);
       showSnackbar(
-        t("common.error") + ": " + (error instanceof Error ? error.message : ""),
+        t("common.error") +
+          ": " +
+          (error instanceof Error ? error.message : ""),
         "error"
       );
     }
@@ -118,8 +118,7 @@ export default function WeekPage() {
   // Verificar si la semana está vacía (contar todas las recetas, completadas o no)
   const isWeekEmpty = useMemo(() => {
     return Object.values(week).every(
-      (dayMeals) =>
-        dayMeals.lunch.length === 0 && dayMeals.dinner.length === 0
+      (dayMeals) => dayMeals.lunch.length === 0 && dayMeals.dinner.length === 0
     );
   }, [week]);
 
@@ -165,48 +164,130 @@ export default function WeekPage() {
         </Button>
       </Box>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "24px",
+          boxShadow: "0 10px 30px rgba(255, 23, 68, 0.15)",
+          border: "2px solid #FFC107",
+          overflow: "hidden",
+          transition: "all 0.3s ease",
+          background: "linear-gradient(to bottom, #FFF9E6 0%, #FFFFFF 100%)",
+          "&:hover": {
+            boxShadow: "0 15px 35px rgba(255, 23, 68, 0.25)",
+            transform: "translateY(-2px)",
+          },
+        }}
+      >
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}></TableCell>
+            <TableRow
+              sx={{
+                background:
+                  "linear-gradient(135deg, #FF6B9D 0%, #FFC107 50%, #a9def3 100%)",
+              }}
+            >
+              <TableCell
+                sx={{
+                  fontWeight: 600,
+                  color: "white",
+                  borderBottom: "none",
+                  fontSize: "1.1rem",
+                }}
+              ></TableCell>
               {days.map((day) => (
-                <TableCell key={day.value} align="center" sx={{ fontWeight: 600 }}>
+                <TableCell
+                  key={day.value}
+                  align="center"
+                  sx={{
+                    fontWeight: 700,
+                    color: "white",
+                    fontSize: "1.2rem",
+                    py: 2.5,
+                    borderBottom: "none",
+                    textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      transform: "scale(1.05)",
+                    },
+                  }}
+                >
                   {day.label}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {mealTypes.map((meal) => (
-              <TableRow key={meal.value}>
+            {mealTypes.map((meal, index) => (
+              <TableRow
+                key={meal.value}
+                sx={{
+                  "&:nth-of-type(odd)": { backgroundColor: "#FFF9E6" },
+                  "&:nth-of-type(even)": { backgroundColor: "#FFFFFF" },
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    backgroundColor: "#FFD54F20",
+                    transform: "scale(1.01)",
+                  },
+                }}
+              >
                 <TableCell
                   component="th"
                   scope="row"
-                  sx={{ fontWeight: 600, minWidth: 120 }}
+                  sx={{
+                    fontWeight: 700,
+                    minWidth: 120,
+                    color: "#FF1744",
+                    fontSize: "1.2rem",
+                    borderBottom:
+                      index === mealTypes.length - 1
+                        ? "none"
+                        : "2px solid #FFC10730",
+                    borderRight: "2px solid #FFC10730",
+                  }}
                 >
                   {meal.label}
                 </TableCell>
                 {days.map((day) => {
                   const meals = week[day.value][meal.value];
                   return (
-                    <TableCell key={`${day.value}-${meal.value}`} align="center">
+                    <TableCell
+                      key={`${day.value}-${meal.value}`}
+                      align="center"
+                      sx={{
+                        borderBottom:
+                          index === mealTypes.length - 1
+                            ? "none"
+                            : "2px solid #FFC10730",
+                        position: "relative",
+                      }}
+                    >
                       <Box
                         sx={{
                           display: "flex",
                           flexDirection: "column",
-                          gap: 1,
-                          minHeight: 60,
+                          gap: 1.5,
+                          minHeight: 80,
                           alignItems: "center",
-                          justifyContent: "flex-start",
-                          py: 1,
+                          justifyContent: "center",
+                          py: 1.5,
                         }}
                       >
                         {meals.length === 0 ? (
                           <Typography
                             variant="body2"
                             color="text.secondary"
-                            sx={{ fontStyle: "italic" }}
+                            sx={{
+                              fontStyle: "italic",
+                              opacity: 0.5,
+                              fontSize: "1rem",
+                              transition: "all 0.3s",
+                              "&:hover": {
+                                transform: "scale(1.2) rotate(10deg)",
+                                opacity: 0.8,
+                              },
+                              cursor: "default",
+                            }}
                           >
                             {t("week.noRecipes")}
                           </Typography>
@@ -228,16 +309,36 @@ export default function WeekPage() {
                               sx={{
                                 cursor: "pointer",
                                 maxWidth: "100%",
-                                bgcolor: mealItem.completed
-                                  ? "success.main"
-                                  : undefined,
-                                color: mealItem.completed
-                                  ? "success.contrastText"
-                                  : undefined,
+                                borderRadius: "20px",
+                                fontWeight: 500,
+                                fontSize: "1rem",
+                                padding: "8px 12px",
+                                boxShadow: mealItem.completed
+                                  ? "0 3px 10px rgba(76, 175, 80, 0.3)"
+                                  : "0 3px 10px rgba(255, 23, 68, 0.25)",
+                                transition:
+                                  "all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                                background: mealItem.completed
+                                  ? "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)"
+                                  : "linear-gradient(135deg, #a9def3 0%, #e7fdff 100%)",
+                                color: mealItem.completed ? "white" : "#333",
+                                border: "2px solid",
+                                borderColor: mealItem.completed
+                                  ? "#388E3C"
+                                  : "#a9def3",
                                 "&:hover": {
-                                  bgcolor: mealItem.completed
-                                    ? "success.dark"
-                                    : "action.hover",
+                                  transform:
+                                    "scale(1.08) translateY(-4px) rotate(-2deg)",
+                                  boxShadow: mealItem.completed
+                                    ? "0 6px 16px rgba(76, 175, 80, 0.5)"
+                                    : "0 6px 16px rgba(255, 193, 7, 0.4)",
+                                  background: mealItem.completed
+                                    ? "linear-gradient(135deg, #388E3C 0%, #4CAF50 100%)"
+                                    : "linear-gradient(135deg, #FF6B9D 0%, #FFC107 100%)",
+                                  color: "white",
+                                  borderColor: mealItem.completed
+                                    ? "#2E7D32"
+                                    : "#FF1744",
                                 },
                               }}
                             />
@@ -264,7 +365,14 @@ export default function WeekPage() {
                 meal: mealTypes.find((m) => m.value === recipeToDelete.mealType)
                   ?.label,
               }) ||
-              `¿Estás seguro de querer eliminar "${recipeToDelete.recipeName}" del ${days.find((d) => d.value === recipeToDelete.day)?.label} (${mealTypes.find((m) => m.value === recipeToDelete.mealType)?.label})?`
+              `¿Estás seguro de querer eliminar "${
+                recipeToDelete.recipeName
+              }" del ${
+                days.find((d) => d.value === recipeToDelete.day)?.label
+              } (${
+                mealTypes.find((m) => m.value === recipeToDelete.mealType)
+                  ?.label
+              })?`
             : ""
         }
         onConfirm={confirmDelete}
@@ -281,4 +389,3 @@ export default function WeekPage() {
     </Container>
   );
 }
-

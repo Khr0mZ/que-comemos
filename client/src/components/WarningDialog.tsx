@@ -82,11 +82,7 @@ export default function WarningDialog({
           }}
         >
           <Box>
-            <Button
-              onClick={onCancel}
-              variant="outlined"
-              startIcon={<span style={{ fontSize: "1rem" }}>❌</span>}
-            >
+            <Button onClick={onCancel} variant="outlined">
               {cancelText || t("common.cancel")}
             </Button>
           </Box>
@@ -94,7 +90,6 @@ export default function WarningDialog({
             <Button
               onClick={onConfirm}
               variant="contained"
-              startIcon={<span style={{ fontSize: "1rem" }}>🗑️</span>}
               sx={{
                 bgcolor: "error.main",
                 "&:hover": { color: "error.main" },

@@ -107,11 +107,11 @@ export default function Layout({ children }: LayoutProps) {
     location.pathname.startsWith("/recipe/") || location.pathname === "/recipe";
 
   const getNavValue = () => {
-    if (location.pathname === "/inventory") return 1;
+    if (location.pathname === "/") return 0;
+    if (location.pathname === "/shopping") return 1;
     if (location.pathname === "/recipes" || isRecipeDetailPage) return 2;
-    if (location.pathname === "/shopping") return 3;
+    if (location.pathname === "/inventory") return 3;
     if (location.pathname === "/cooking") return 4;
-    if (location.pathname === "/week") return 5;
     return 0;
   };
 
@@ -225,7 +225,7 @@ export default function Layout({ children }: LayoutProps) {
                   <Avatar
                     variant="square"
                     src="/logo.webp"
-                    alt="Home"
+                    alt="Week"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -253,8 +253,8 @@ export default function Layout({ children }: LayoutProps) {
                 label={
                   <Avatar
                     variant="square"
-                    src="/inventory.webp"
-                    alt="Home"
+                    src="/shopping.webp"
+                    alt="Shopping"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -262,7 +262,7 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 }
                 component={Link}
-                to="/inventory"
+                to="/shopping"
                 slotProps={{
                   label: {
                     sx: {
@@ -334,8 +334,8 @@ export default function Layout({ children }: LayoutProps) {
                 label={
                   <Avatar
                     variant="square"
-                    src="/shopping.webp"
-                    alt="Shopping"
+                    src="/inventory.webp"
+                    alt="Home"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -343,7 +343,7 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 }
                 component={Link}
-                to="/shopping"
+                to="/inventory"
                 slotProps={{
                   label: {
                     sx: {
@@ -373,35 +373,6 @@ export default function Layout({ children }: LayoutProps) {
                 }
                 component={Link}
                 to="/cooking"
-                slotProps={{
-                  label: {
-                    sx: {
-                      width: "30px",
-                      height: "30px",
-                      transition: "all 0.3s ease",
-                      "&.Mui-selected": {
-                        width: "52px",
-                        height: "52px",
-                      },
-                    },
-                  },
-                }}
-              />
-              <BottomNavigationAction
-                disableRipple
-                label={
-                  <Avatar
-                    variant="square"
-                    src="/calendar.webp"
-                    alt="Week"
-                    sx={{
-                      width: "inherit",
-                      height: "inherit",
-                    }}
-                  />
-                }
-                component={Link}
-                to="/week"
                 slotProps={{
                   label: {
                     sx: {
@@ -545,7 +516,7 @@ export default function Layout({ children }: LayoutProps) {
                   <Avatar
                     variant="square"
                     src="/logo.webp"
-                    alt="Home"
+                    alt="Week"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -573,8 +544,8 @@ export default function Layout({ children }: LayoutProps) {
                 label={
                   <Avatar
                     variant="square"
-                    src="/inventory.webp"
-                    alt="Home"
+                    src="/shopping.webp"
+                    alt="Shopping"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -582,7 +553,7 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 }
                 component={Link}
-                to="/inventory"
+                to="/shopping"
                 slotProps={{
                   label: {
                     sx: {
@@ -654,8 +625,8 @@ export default function Layout({ children }: LayoutProps) {
                 label={
                   <Avatar
                     variant="square"
-                    src="/shopping.webp"
-                    alt="Shopping"
+                    src="/inventory.webp"
+                    alt="Home"
                     sx={{
                       width: "inherit",
                       height: "inherit",
@@ -663,7 +634,7 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 }
                 component={Link}
-                to="/shopping"
+                to="/inventory"
                 slotProps={{
                   label: {
                     sx: {
@@ -693,35 +664,6 @@ export default function Layout({ children }: LayoutProps) {
                 }
                 component={Link}
                 to="/cooking"
-                slotProps={{
-                  label: {
-                    sx: {
-                      width: "48px",
-                      height: "48px",
-                      transition: "all 0.3s ease",
-                      "&.Mui-selected": {
-                        width: "70px",
-                        height: "70px",
-                      },
-                    },
-                  },
-                }}
-              />
-              <BottomNavigationAction
-                disableRipple
-                label={
-                  <Avatar
-                    variant="square"
-                    src="/calendar.webp"
-                    alt="Week"
-                    sx={{
-                      width: "inherit",
-                      height: "inherit",
-                    }}
-                  />
-                }
-                component={Link}
-                to="/week"
                 slotProps={{
                   label: {
                     sx: {

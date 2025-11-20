@@ -1,26 +1,27 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
-import Layout from './components/Layout';
-import UserInitializer from './components/UserInitializer';
-import ClerkProviderWrapper from './components/ClerkProviderWrapper';
-import HomePage from './pages/HomePage';
-import InventoryPage from './pages/InventoryPage';
-import RecipesPage from './pages/RecipesPage';
-import RecipeDetailPage from './pages/RecipeDetailPage';
-import ShoppingPage from './pages/ShoppingPage';
-import CookingPage from './pages/CookingPage';
-import WeekPage from './pages/WeekPage';
-import AuthPage from './pages/AuthPage';
-import { SnackbarProvider } from './components/CustomSnackbar';
-import { theme } from './theme/theme';
-import './i18n/config';
+import { CssBaseline } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import ClerkProviderWrapper from "./components/ClerkProviderWrapper";
+import { SnackbarProvider } from "./components/CustomSnackbar";
+import Layout from "./components/Layout";
+import UserInitializer from "./components/UserInitializer";
+import "./i18n/config";
+import Auth from "./pages/Auth";
+import Cooking from "./pages/Cooking";
+import IngredientList from "./pages/IngredientList";
+import Planning from "./pages/Planning";
+import RecipeDetails from "./pages/RecipeDetails";
+import RecipeList from "./pages/RecipeList";
+import ShoppingList from "./pages/ShoppingList";
+import { theme } from "./theme/theme";
 
 // Obtener la clave pública de Clerk desde las variables de entorno
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '';
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
 
 if (!PUBLISHABLE_KEY) {
-  console.warn('VITE_CLERK_PUBLISHABLE_KEY no está configurada. Clerk no funcionará correctamente.');
+  console.warn(
+    "VITE_CLERK_PUBLISHABLE_KEY no está configurada. Clerk no funcionará correctamente."
+  );
 }
 
 function App() {
@@ -33,16 +34,15 @@ function App() {
           <BrowserRouter>
             <Layout>
               <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/inventory" element={<InventoryPage />} />
-                <Route path="/recipes" element={<RecipesPage />} />
-                <Route path="/shopping" element={<ShoppingPage />} />
-                <Route path="/cooking" element={<CookingPage />} />
-                <Route path="/week" element={<WeekPage />} />
-                <Route path="/recipe/new" element={<RecipeDetailPage />} />
-                <Route path="/recipe/ai" element={<RecipeDetailPage />} />
-                <Route path="/recipe/:id" element={<RecipeDetailPage />} />
+                <Route path="/" element={<Planning />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/inventory" element={<IngredientList />} />
+                <Route path="/recipes" element={<RecipeList />} />
+                <Route path="/shopping" element={<ShoppingList />} />
+                <Route path="/cooking" element={<Cooking />} />
+                <Route path="/recipe/new" element={<RecipeDetails />} />
+                <Route path="/recipe/ai" element={<RecipeDetails />} />
+                <Route path="/recipe/:id" element={<RecipeDetails />} />
               </Routes>
             </Layout>
           </BrowserRouter>

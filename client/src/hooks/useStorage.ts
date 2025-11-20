@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import i18n from "../i18n/config";
 import { storage } from "../services/storage";
 import type {
   DayOfWeek,
@@ -8,6 +9,7 @@ import type {
   ShoppingListData,
   WeekData,
 } from "../types";
+import { getAllIngredients, normalizeSearchText } from "../utils/ingredientTranslations";
 
 // Re-export storage for convenience
 export { storage };
@@ -26,8 +28,32 @@ export function useIngredients() {
       // Usar JSON.parse/stringify para crear una copia completamente nueva
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
+      
+      // Ordenar alfabéticamente según el idioma actual
+      const currentLang = i18n.language || "es";
+      const globalIngredientsData = await getAllIngredients();
+      
+      const sortedData = [...newData].sort((a, b) => {
+        // Buscar los datos completos del ingrediente en la lista global por id
+        const ingA = globalIngredientsData.find((g) => g.id === a.id);
+        const ingB = globalIngredientsData.find((g) => g.id === b.id);
+
+        // Obtener el nombre según el idioma
+        const nameA =
+          currentLang === "en" ? ingA?.nameEN || a.id : ingA?.nameES || a.id;
+        const nameB =
+          currentLang === "en" ? ingB?.nameEN || b.id : ingB?.nameES || b.id;
+
+        // Ordenar alfabéticamente ignorando mayúsculas y acentos
+        return normalizeSearchText(nameA).localeCompare(
+          normalizeSearchText(nameB),
+          currentLang,
+          { sensitivity: "base" }
+        );
+      });
+      
       // Siempre actualizar para asegurar que los cambios se reflejen
-      setIngredients(newData);
+      setIngredients(sortedData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading ingredients:", error);
@@ -79,8 +105,17 @@ export function useRecipes() {
       // Usar JSON.parse/stringify para crear una copia completamente nueva
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
+      
+      // Ordenar alfabéticamente por nombre
+      const sortedData = [...newData].sort((a, b) => {
+        return a.name.localeCompare(b.name, undefined, {
+          sensitivity: "base",
+          numeric: true,
+        });
+      });
+      
       // Siempre actualizar para asegurar que los cambios se reflejen
-      setRecipes(newData);
+      setRecipes(sortedData);
     } catch (error) {
       console.error("Error loading recipes:", error);
     } finally {

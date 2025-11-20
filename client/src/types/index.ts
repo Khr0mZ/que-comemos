@@ -1,7 +1,7 @@
 // Tipos principales de la aplicación
 
 export interface Ingredient {
-    name: string
+    id: string
     category: IngredientCategory
     measure: string
 }
@@ -9,7 +9,7 @@ export interface Ingredient {
 export type IngredientCategory = 'vegetable' | 'fruit' | 'meat' | 'dairy' | 'grain' | 'spice' | 'beverage' | 'other'
 
 export interface RecipeIngredient {
-    name: string
+    id: string
     measure: string
 }
 
@@ -28,12 +28,12 @@ export interface Recipe {
 }
 
 export interface ShoppingListItem {
-    name: string
+    id: string
     measure: string
 }
 
 export interface InventoryIngredientMatch {
-    recipeIngredientName: string  // Nombre del ingrediente en la receta
+    recipeIngredientName: string  // ID del ingrediente en la receta
     recipeIngredientMeasure: string  // Medida requerida en la receta
     inventoryIngredient: Ingredient  // Ingrediente del inventario que coincide
 }
