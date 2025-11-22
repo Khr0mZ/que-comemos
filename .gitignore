@@ -10,7 +10,6 @@ lerna-debug.log*
 client/node_modules
 client/dist
 client/dist-ssr
-client/cloudflared
 *.local
 
 # Archivos JSON de base de datos (ahora son por usuario)
