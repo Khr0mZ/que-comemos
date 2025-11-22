@@ -778,9 +778,9 @@ export default function RecipeDetails() {
                   />
                 )}
                 {displayRecipe?.tags &&
-                  displayRecipe.tags.map((tag, index) => (
+                  displayRecipe.tags.map((tag) => (
                     <Chip
-                      key={index}
+                      key={tag}
                       label={t(`tags.${tag}`, { defaultValue: tag })}
                       size="small"
                       color="info"
@@ -904,17 +904,17 @@ export default function RecipeDetails() {
                 >
                   {getSortedIngredients(formData.ingredients, true).map(
                     (ing, index) => {
-                      // Encontrar el índice original en formData.ingredients para mantener la referencia correcta
-                      const originalIndex = formData.ingredients.findIndex(
-                        (origIng) =>
-                          origIng.id === ing.id &&
-                          origIng.measure === ing.measure
-                      );
-                      const actualIndex =
-                        originalIndex !== -1 ? originalIndex : index;
+                      // Cuando skipSort es true, el orden se mantiene igual que formData.ingredients
+                      // Por lo tanto, el index del map corresponde directamente al índice en formData.ingredients
+                      const actualIndex = index;
+                      // Usar el id del ingrediente como key (cada ingrediente tiene un id único)
+                      // Fallback al índice solo si el ingrediente no tiene id todavía (durante creación)
+                      const stableKey = ing.id
+                        ? `ingredient-${ing.id}-${i18n.language}`
+                        : `ingredient-temp-${actualIndex}-${i18n.language}`;
                       return (
                         <Stack
-                          key={`ingredient-${index}-${i18n.language}`}
+                          key={stableKey}
                           direction="row"
                           spacing={1}
                           alignItems="center"
@@ -922,15 +922,27 @@ export default function RecipeDetails() {
                           <Autocomplete
                             options={allIngredientNames}
                             value={ing.id || null}
+                            freeSolo
                             onChange={(_, newValue) => {
-                              // Cuando se selecciona una opción, newValue es el id
-                              updateIngredient(index, "id", newValue || "");
-                              // Limpiar el estado del input cuando se selecciona
-                              setIngredientInputValues((prev) => {
-                                const newValues = { ...prev };
-                                delete newValues[index];
-                                return newValues;
-                              });
+                              // Cuando se selecciona una opción, newValue es el id (string)
+                              // Si es string, es un id válido; si es null, se limpió
+                              if (typeof newValue === "string") {
+                                updateIngredient(actualIndex, "id", newValue);
+                                // Limpiar el estado del input cuando se selecciona
+                                setIngredientInputValues((prev) => {
+                                  const newValues = { ...prev };
+                                  delete newValues[actualIndex];
+                                  return newValues;
+                                });
+                              } else if (newValue === null) {
+                                // Cuando se limpia el campo
+                                updateIngredient(actualIndex, "id", "");
+                                setIngredientInputValues((prev) => {
+                                  const newValues = { ...prev };
+                                  delete newValues[actualIndex];
+                                  return newValues;
+                                });
+                              }
                             }}
                             getOptionLabel={(option) => {
                               if (typeof option === "string") {
@@ -1042,6 +1054,7 @@ export default function RecipeDetails() {
                               return option === value;
                             }}
                             inputValue={
+                              // Priorizar siempre el valor que el usuario está escribiendo
                               ingredientInputValues[actualIndex] !== undefined
                                 ? ingredientInputValues[actualIndex]
                                 : ing.id
@@ -1055,14 +1068,21 @@ export default function RecipeDetails() {
                                         : ingData.nameES
                                       : ing.id;
                                   })()
-                                : ""
+                                : "" // Cuando no hay ingrediente seleccionado, permitir escribir desde vacío
                             }
                             onInputChange={(_, newInputValue, reason) => {
-                              // Actualizar el estado del input para permitir escribir y filtrar
+                              // Usar el índice real del array (actualIndex) para identificar únicamente cada input
+                              // Siempre actualizar el estado del input para permitir escribir libremente
                               setIngredientInputValues((prev) => ({
                                 ...prev,
                                 [actualIndex]: newInputValue,
                               }));
+
+                              // Si el usuario está escribiendo (reason === "input"), no hacer nada más
+                              // Solo actualizar el estado del input para que pueda seguir escribiendo
+                              if (reason === "input") {
+                                return; // Permitir escribir libremente
+                              }
 
                               if (reason === "clear") {
                                 // Cuando se limpia el campo
@@ -1229,7 +1249,7 @@ export default function RecipeDetails() {
                 </Typography>
                 <List key={`ingredients-${i18n.language}`}>
                   {getSortedIngredients(displayRecipe?.ingredients || []).map(
-                    (ingredient, idx) => {
+                    (ingredient) => {
                       // Buscar el ingrediente completo por id
                       const ingData = allIngredientsData.find(
                         (g) => g.id === ingredient.id
@@ -1239,8 +1259,14 @@ export default function RecipeDetails() {
                           ? ingData.nameEN
                           : ingData.nameES
                         : ingredient.id;
+                      // Usar el id del ingrediente como key (cada ingrediente tiene un id único)
+                      const stableKey = ingredient.id
+                        ? `ingredient-display-${ingredient.id}-${i18n.language}`
+                        : `ingredient-display-${
+                            ingredient.measure || "no-id"
+                          }-${i18n.language}`;
                       return (
-                        <ListItem key={idx}>
+                        <ListItem key={stableKey}>
                           <ListItemText
                             primary={displayName}
                             secondary={ingredient.measure}
