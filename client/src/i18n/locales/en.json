@@ -53,7 +53,7 @@
     "editRecipe": "Edit Recipe",
     "deleteRecipe": "Delete Recipe",
     "deleteRecipeMessage": "Delete this recipe for good?",
-    "titleLabel": "Title",
+    "nameLabel": "Name",
     "ingredientsLabel": "Ingredients",
     "instructionsLabel": "Steps",
     "tagsLabel": "Tags",

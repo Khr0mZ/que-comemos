@@ -23,7 +23,8 @@ export interface RecipeIngredient {
 }
 
 export interface Recipe {
-  name: string;
+  nameES: string;
+  nameEN: string;
   category: string;
   area: string;
   instructionsES?: string;

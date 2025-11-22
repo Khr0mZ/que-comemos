@@ -27,7 +27,7 @@ import type { Recipe, RecipeAvailability } from "../types";
 import { getRandomColorFromString } from "../utils/colorUtils";
 import type { IngredientData } from "../utils/ingredientTranslations";
 import { getAllIngredients } from "../utils/ingredientTranslations";
-import { checkRecipeAvailability } from "../utils/recipeUtils";
+import { checkRecipeAvailability, getRecipeName } from "../utils/recipeUtils";
 
 export default function Cooking() {
   const { t, i18n: i18nHook } = useTranslation();
@@ -331,7 +331,12 @@ export default function Cooking() {
                         {expandedRecipes.has(recipeList.recipeName) ? "▼" : "▶"}
                       </IconButton>
                       <Typography variant="h5">
-                        {recipeList.recipeName}
+                        {(() => {
+                          const recipe = availability?.recipe;
+                          return recipe 
+                            ? getRecipeName(recipe, i18nHook.language || "es")
+                            : recipeList.recipeName;
+                        })()}
                         {recipeCounts[recipeList.recipeName] > 1 && (
                           <Box
                             component="span"
@@ -606,7 +611,7 @@ export default function Cooking() {
                                 component="img"
                                 height="200"
                                 image={recipe.imageURL}
-                                alt={recipe.name}
+                                alt={getRecipeName(recipe, i18nHook.language || "es")}
                               />
                             )}
                             <CardContent>

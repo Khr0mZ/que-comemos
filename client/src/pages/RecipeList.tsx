@@ -28,19 +28,20 @@ import {
 } from "../hooks/useStorage";
 
 import type { Recipe } from "../types";
-import { getAllIngredients } from "../utils/ingredientTranslations";
+import {
+  getAutocompleteColorStyles,
+  getRandomColorFromString,
+  getTextFieldColorStyles,
+} from "../utils/colorUtils";
 import type { IngredientData } from "../utils/ingredientTranslations";
+import { getAllIngredients } from "../utils/ingredientTranslations";
 import {
   filterRecipesByArea,
   filterRecipesByCategory,
   filterRecipesByIngredients,
   filterRecipesByTags,
+  getRecipeName,
 } from "../utils/recipeUtils";
-import {
-  getRandomColorFromString,
-  getTextFieldColorStyles,
-  getAutocompleteColorStyles,
-} from "../utils/colorUtils";
 
 const ITEMS_PER_PAGE = 30;
 
@@ -58,7 +59,9 @@ export default function RecipeList() {
   const [categories, setCategories] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
-  const [allIngredientsData, setAllIngredientsData] = useState<IngredientData[]>([]);
+  const [allIngredientsData, setAllIngredientsData] = useState<
+    IngredientData[]
+  >([]);
 
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,9 +113,11 @@ export default function RecipeList() {
     // Text search
     if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (recipe) =>
-          recipe.name.toLowerCase().includes(searchLower) ||
+      const currentLang = i18n.language || "es";
+      filtered = filtered.filter((recipe) => {
+        const recipeName = getRecipeName(recipe, currentLang);
+        return (
+          recipeName.toLowerCase().includes(searchLower) ||
           (recipe.tags &&
             recipe.tags.some((tag) =>
               tag.toLowerCase().includes(searchLower)
@@ -120,7 +125,8 @@ export default function RecipeList() {
           (recipe.category &&
             recipe.category.toLowerCase().includes(searchLower)) ||
           (recipe.area && recipe.area.toLowerCase().includes(searchLower))
-      );
+        );
+      });
     }
 
     // Filter by ingredients
@@ -157,6 +163,7 @@ export default function RecipeList() {
     selectedTags,
     selectedIngredients,
     showOnlyInternal,
+    i18n.language,
   ]);
 
   // Reset visible count when filters change
@@ -198,22 +205,24 @@ export default function RecipeList() {
 
   const handleViewRecipe = useCallback(
     (recipe: Recipe) => {
-      navigate(`/recipe/${encodeURIComponent(recipe.name)}`);
+      const identifier = recipe.nameES || recipe.nameEN;
+      navigate(`/recipe/${encodeURIComponent(identifier)}`);
     },
     [navigate]
   );
 
   const handleEdit = useCallback(
     (recipe: Recipe) => {
-      navigate(`/recipe/${encodeURIComponent(recipe.name)}`, {
+      const identifier = recipe.nameES || recipe.nameEN;
+      navigate(`/recipe/${encodeURIComponent(identifier)}`, {
         state: { edit: true },
       });
     },
     [navigate]
   );
 
-  const handleDelete = useCallback((name: string) => {
-    setRecipeToDelete(name);
+  const handleDelete = useCallback((identifier: string) => {
+    setRecipeToDelete(identifier);
     setDeleteDialogOpen(true);
   }, []);
 
@@ -280,7 +289,8 @@ export default function RecipeList() {
     }
     const randomIndex = Math.floor(Math.random() * recipes.length);
     const randomRecipe = recipes[randomIndex];
-    navigate(`/recipe/${encodeURIComponent(randomRecipe.name)}`);
+    const identifier = randomRecipe.nameES || randomRecipe.nameEN;
+    navigate(`/recipe/${encodeURIComponent(identifier)}`);
   };
 
   const toggleIngredient = (ingredientName: string) => {
@@ -336,7 +346,12 @@ export default function RecipeList() {
           <Button
             variant="outlined"
             onClick={handleRandomRecipe}
-            sx={{ display: "flex", alignItems: "center", gap: 1, whiteSpace: "nowrap" }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              whiteSpace: "nowrap",
+            }}
           >
             <span style={{ fontSize: "1rem" }}>🎲</span>
             <Box sx={{ display: { xs: "none", md: "flex" } }}>
@@ -348,7 +363,12 @@ export default function RecipeList() {
             variant="outlined"
             color="error"
             onClick={handleDeleteAll}
-            sx={{ display: "flex", alignItems: "center", gap: 1, whiteSpace: "nowrap" }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              whiteSpace: "nowrap",
+            }}
           >
             <span style={{ fontSize: "1rem" }}>🗑️</span>
             <Box sx={{ display: { xs: "none", md: "flex" } }}>
@@ -359,7 +379,12 @@ export default function RecipeList() {
             variant="outlined"
             color="warning"
             onClick={handleReset}
-            sx={{ display: "flex", alignItems: "center", gap: 1, whiteSpace: "nowrap" }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              whiteSpace: "nowrap",
+            }}
           >
             <span style={{ fontSize: "1rem" }}>🔄</span>
             <Box sx={{ display: { xs: "none", md: "flex" } }}>
@@ -369,7 +394,12 @@ export default function RecipeList() {
           <Button
             variant="contained"
             onClick={() => navigate("/recipe/new")}
-            sx={{ display: "flex", alignItems: "center", gap: 1, whiteSpace: "nowrap" }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              whiteSpace: "nowrap",
+            }}
           >
             <span style={{ fontSize: "1rem" }}>➕</span>
             <Box sx={{ display: { xs: "none", md: "flex" } }}>
@@ -382,13 +412,23 @@ export default function RecipeList() {
       <Box sx={{ mb: 3 }}>
         <Card sx={{ p: 2, mb: 2 }}>
           <Stack spacing={2}>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <TextField
                 fullWidth
                 placeholder={t("recipes.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                sx={getTextFieldColorStyles("recipes.searchPlaceholder"), { flex: 1, minWidth: 200 }}
+                sx={
+                  (getTextFieldColorStyles("recipes.searchPlaceholder"),
+                  { flex: 1, minWidth: 200 })
+                }
                 slotProps={{
                   input: {
                     startAdornment: (
@@ -608,9 +648,13 @@ export default function RecipeList() {
                         label={
                           <Typography variant="body2">
                             {(() => {
-                              const ingData = allIngredientsData.find((g) => g.id === ingredient.id);
-                              return ingData 
-                                ? (i18n.language === "en" ? ingData.nameEN : ingData.nameES)
+                              const ingData = allIngredientsData.find(
+                                (g) => g.id === ingredient.id
+                              );
+                              return ingData
+                                ? i18n.language === "en"
+                                  ? ingData.nameEN
+                                  : ingData.nameES
                                 : ingredient.id;
                             })()}
                           </Typography>
@@ -640,18 +684,42 @@ export default function RecipeList() {
             }}
           >
             {Array.from({ length: 8 }).map((_, index) => (
-              <Card key={`skeleton-${index}`} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Card
+                key={`skeleton-${index}`}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
+                }}
+              >
                 <Skeleton variant="rectangular" width="100%" height={200} />
-                <Box sx={{ px: 1, py: 1.5, display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1 }} />
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                <Box
+                  sx={{
+                    px: 1,
+                    py: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    flex: 1,
+                  }}
+                >
+                  <Skeleton
+                    variant="text"
+                    width="80%"
+                    height={32}
+                    sx={{ mb: 1 }}
+                  />
+                  <Box
+                    sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 1 }}
+                  >
                     <Skeleton variant="rounded" width={60} height={24} />
                     <Skeleton variant="rounded" width={60} height={24} />
                     <Skeleton variant="rounded" width={60} height={24} />
                   </Box>
                 </Box>
-                <Box sx={{ mt: 'auto' }}>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', p: 1 }}>
+                <Box sx={{ mt: "auto" }}>
+                  <Box
+                    sx={{ display: "flex", gap: 1, alignItems: "center", p: 1 }}
+                  >
                     <Skeleton variant="circular" width={32} height={32} />
                     <Skeleton variant="circular" width={32} height={32} />
                   </Box>
@@ -694,7 +762,7 @@ export default function RecipeList() {
             >
               {visibleRecipes.map((recipe) => (
                 <RecipeCard
-                  key={recipe.name}
+                  key={recipe.nameES || recipe.nameEN}
                   recipe={recipe}
                   onView={handleViewRecipe}
                   onEdit={handleEdit}

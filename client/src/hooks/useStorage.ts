@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import i18n from "../i18n/config";
+import { useTranslation } from "react-i18next";
 import { storage } from "../services/storage";
 import { syncService } from "../services/sync";
 import type {
@@ -19,6 +19,7 @@ export { storage };
  * Hook para obtener ingredientes con reactividad
  */
 export function useIngredients() {
+  const { i18n } = useTranslation();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(storage.getUserId());
@@ -61,7 +62,7 @@ export function useIngredients() {
       console.error("Error loading ingredients:", error);
       setLoading(false);
     }
-  }, []);
+  }, [i18n.language]);
 
   // Usar useRef para mantener la referencia más reciente de la función
   const loadIngredientsRef = useRef(loadIngredients);
@@ -121,6 +122,34 @@ export function useIngredients() {
     return () => clearInterval(interval);
   }, [userId]);
 
+  // Reordenar ingredientes cuando cambie el idioma
+  useEffect(() => {
+    const reorderIngredients = async () => {
+      const currentLang = i18n.language || "es";
+      const globalIngredientsData = await getAllIngredients();
+      
+      setIngredients((prevIngredients) => {
+        return [...prevIngredients].sort((a, b) => {
+          const ingA = globalIngredientsData.find((g) => g.id === a.id);
+          const ingB = globalIngredientsData.find((g) => g.id === b.id);
+
+          const nameA =
+            currentLang === "en" ? ingA?.nameEN || a.id : ingA?.nameES || a.id;
+          const nameB =
+            currentLang === "en" ? ingB?.nameEN || b.id : ingB?.nameES || b.id;
+
+          return normalizeSearchText(nameA).localeCompare(
+            normalizeSearchText(nameB),
+            currentLang,
+            { sensitivity: "base" }
+          );
+        });
+      });
+    };
+    
+    reorderIngredients();
+  }, [i18n]);
+
   return { ingredients, loading, refresh: loadIngredients };
 }
 
@@ -128,6 +157,7 @@ export function useIngredients() {
  * Hook para obtener recetas con reactividad
  */
 export function useRecipes() {
+  const { i18n } = useTranslation();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(storage.getUserId());
@@ -141,9 +171,12 @@ export function useRecipes() {
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
       
-      // Ordenar alfabéticamente por nombre
+      // Ordenar alfabéticamente por nombre según el idioma actual
+      const currentLang = i18n.language || "es";
       const sortedData = [...newData].sort((a, b) => {
-        return a.name.localeCompare(b.name, undefined, {
+        const nameA = currentLang === "en" ? (a.nameEN || a.nameES) : (a.nameES || a.nameEN);
+        const nameB = currentLang === "en" ? (b.nameEN || b.nameES) : (b.nameES || b.nameEN);
+        return nameA.localeCompare(nameB, undefined, {
           sensitivity: "base",
           numeric: true,
         });
@@ -156,7 +189,7 @@ export function useRecipes() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [i18n.language]);
 
   // Usar useRef para mantener la referencia más reciente de la función
   const loadRecipesRef = useRef(loadRecipes);
@@ -215,6 +248,21 @@ export function useRecipes() {
 
     return () => clearInterval(interval);
   }, [userId]);
+
+  // Reordenar recetas cuando cambie el idioma
+  useEffect(() => {
+    setRecipes((prevRecipes) => {
+      const currentLang = i18n.language || "es";
+      return [...prevRecipes].sort((a, b) => {
+        const nameA = currentLang === "en" ? (a.nameEN || a.nameES) : (a.nameES || a.nameEN);
+        const nameB = currentLang === "en" ? (b.nameEN || b.nameES) : (b.nameES || b.nameEN);
+        return nameA.localeCompare(nameB, undefined, {
+          sensitivity: "base",
+          numeric: true,
+        });
+      });
+    });
+  }, [i18n]);
 
   return { recipes, loading, refresh: loadRecipes };
 }

@@ -7,6 +7,17 @@ import type {
 } from "../types";
 
 /**
+ * Obtener el nombre de la receta según el idioma actual
+ */
+export function getRecipeName(recipe: Recipe | null, language: string = "es"): string {
+  if (!recipe) return "";
+  if (language === "en" && recipe.nameEN) {
+    return recipe.nameEN;
+  }
+  return recipe.nameES || recipe.nameEN || "";
+}
+
+/**
  * Comparar ingredientes de receta con inventario y generar lista de compra
  */
 export async function checkRecipeAvailability(

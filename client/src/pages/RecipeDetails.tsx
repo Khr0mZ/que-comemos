@@ -46,6 +46,7 @@ import {
 import {
   checkRecipeAvailability,
   getYouTubeEmbedUrl,
+  getRecipeName,
 } from "../utils/recipeUtils";
 
 export default function RecipeDetails() {
@@ -60,7 +61,8 @@ export default function RecipeDetails() {
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Recipe>({
-    name: "",
+    nameES: "",
+    nameEN: "",
     ingredients: [],
     instructionsES: "",
     instructionsEN: "",
@@ -134,6 +136,37 @@ export default function RecipeDetails() {
     return recipe.instructionsES || recipe.instructionsEN || "";
   };
 
+  // Función helper para obtener el nombre según el idioma actual
+  const getName = (recipe: Recipe | null): string => {
+    return getRecipeName(recipe, i18n.language || "es");
+  };
+
+  // Función helper para ordenar ingredientes alfabéticamente según el idioma
+  const getSortedIngredients = (ingredients: RecipeIngredient[]): RecipeIngredient[] => {
+    const currentLang = i18n.language || "es";
+    return [...ingredients].sort((a, b) => {
+      const ingDataA = allIngredientsData.find((g) => g.id === a.id);
+      const ingDataB = allIngredientsData.find((g) => g.id === b.id);
+
+      const nameA = ingDataA
+        ? currentLang === "en"
+          ? ingDataA.nameEN
+          : ingDataA.nameES
+        : a.id;
+      const nameB = ingDataB
+        ? currentLang === "en"
+          ? ingDataB.nameEN
+          : ingDataB.nameES
+        : b.id;
+
+      return normalizeSearchText(nameA).localeCompare(
+        normalizeSearchText(nameB),
+        currentLang,
+        { sensitivity: "base" }
+      );
+    });
+  };
+
   const loadRecipe = useCallback(async () => {
     setLoading(true);
     try {
@@ -145,7 +178,8 @@ export default function RecipeDetails() {
         setIsEditing(true);
         setRecipe(null);
         setFormData({
-          name: "",
+          nameES: "",
+          nameEN: "",
           ingredients: [],
           instructionsES: "",
           instructionsEN: "",
@@ -164,10 +198,10 @@ export default function RecipeDetails() {
           setRecipe(aiRecipe);
         }
       } else if (params.id) {
-        // Receta local - usar nombre como identificador
+        // Receta local - usar identificador (nameES o nameEN)
         setIsCreating(false);
-        const decodedName = decodeURIComponent(params.id);
-        const localRecipe = await storage.getRecipe(decodedName);
+        const decodedIdentifier = decodeURIComponent(params.id);
+        const localRecipe = await storage.getRecipe(decodedIdentifier);
         if (localRecipe) {
           setRecipe(localRecipe);
         }
@@ -193,7 +227,8 @@ export default function RecipeDetails() {
     if (recipe && !isCreating) {
       // Inicializar formData cuando se carga la receta
       setFormData({
-        name: recipe.name,
+        nameES: recipe.nameES || "",
+        nameEN: recipe.nameEN || "",
         ingredients: recipe.ingredients,
         instructionsES: recipe.instructionsES || "",
         instructionsEN: recipe.instructionsEN || "",
@@ -220,7 +255,8 @@ export default function RecipeDetails() {
     if (!recipe) return;
 
     const recipeToSave: Recipe = {
-      name: recipe.name,
+      nameES: recipe.nameES,
+      nameEN: recipe.nameEN,
       ingredients: recipe.ingredients,
       instructionsES: recipe.instructionsES,
       instructionsEN: recipe.instructionsEN,
@@ -251,7 +287,8 @@ export default function RecipeDetails() {
       // Restaurar datos originales
       if (recipe) {
         setFormData({
-          name: recipe.name,
+          nameES: recipe.nameES || "",
+          nameEN: recipe.nameEN || "",
           ingredients: recipe.ingredients,
           instructionsES: recipe.instructionsES || "",
           instructionsEN: recipe.instructionsEN || "",
@@ -267,12 +304,20 @@ export default function RecipeDetails() {
   };
 
   const handleSaveEdit = async () => {
-    if (!formData.name.trim() || isSaving) return;
+    const currentLang = i18n.language || "es";
+    const nameToCheck = currentLang === "en" ? formData.nameEN : formData.nameES;
+    if (!nameToCheck.trim() || isSaving) return;
 
     try {
       setIsSaving(true);
+      // Al guardar, mantener el nombre del otro idioma si existe, o usar el mismo si no existe
       const recipeToSave: Recipe = {
-        name: formData.name,
+        nameES: currentLang === "en" 
+          ? (formData.nameES.trim() || formData.nameEN.trim() || "")
+          : formData.nameES.trim() || "",
+        nameEN: currentLang === "en"
+          ? formData.nameEN.trim() || ""
+          : (formData.nameEN.trim() || formData.nameES.trim() || ""),
         ingredients: formData.ingredients,
         instructionsES: formData.instructionsES?.trim() || undefined,
         instructionsEN: formData.instructionsEN?.trim() || undefined,
@@ -291,11 +336,12 @@ export default function RecipeDetails() {
         // Crear nueva receta
         await saveRecipe(recipeToSave);
         showSnackbar(t("recipes.saveRecipe") + "!", "success");
-        navigate(`/recipe/${encodeURIComponent(recipeToSave.name)}`);
+        // Usar nameES como identificador en la URL
+        navigate(`/recipe/${encodeURIComponent(recipeToSave.nameES || recipeToSave.nameEN)}`);
       } else if (recipe) {
         // Actualizar receta existente
-        const originalName = recipe.name;
-        await updateRecipe(originalName, recipeToSave);
+        const originalIdentifier = recipe.nameES || recipe.nameEN;
+        await updateRecipe(originalIdentifier, recipeToSave);
         setRecipe(recipeToSave);
         setIsCreating(false);
         // Recargar disponibilidad con la receta actualizada
@@ -355,13 +401,15 @@ export default function RecipeDetails() {
     if (!recipe) return;
 
     try {
+      // Usar nameES como identificador (con fallback a nameEN)
+      const recipeIdentifier = recipe.nameES || recipe.nameEN;
       // Agregar la receta a la semana
-      await addRecipeToWeek(day, mealType, recipe.name);
+      await addRecipeToWeek(day, mealType, recipeIdentifier);
 
       // Agregar la receta a la lista de compra, incluso si no hay ingredientes faltantes
       // Esto permite que la receta aparezca en CookingPage si todos los ingredientes están disponibles
       const missingIngredients = availability?.missingIngredients || [];
-      await storage.addRecipeShoppingList(recipe.name, missingIngredients);
+      await storage.addRecipeShoppingList(recipeIdentifier, missingIngredients);
 
       showSnackbar(
         t("week.recipeAddedToWeek") ||
@@ -478,12 +526,21 @@ export default function RecipeDetails() {
                 <Stack spacing={2}>
                   <TextField
                     fullWidth
-                    label={t("recipes.titleLabel")}
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
+                    label={t("recipes.nameLabel") || "Nombre"}
+                    value={
+                      i18n.language === "en"
+                        ? formData.nameEN
+                        : formData.nameES
                     }
-                    sx={getTextFieldColorStyles("recipes.titleLabel")}
+                    onChange={(e) => {
+                      const currentLang = i18n.language || "es";
+                      if (currentLang === "en") {
+                        setFormData({ ...formData, nameEN: e.target.value });
+                      } else {
+                        setFormData({ ...formData, nameES: e.target.value });
+                      }
+                    }}
+                    sx={getTextFieldColorStyles("recipes.nameLabel")}
                   />
                   <Autocomplete
                     options={categories}
@@ -681,12 +738,12 @@ export default function RecipeDetails() {
                 component="img"
                 height="300"
                 image={displayImageURL}
-                alt={displayRecipe?.name}
+                alt={getName(displayRecipe)}
               />
             )}
             <CardContent>
               <Typography variant="h3" component="h1" sx={{ mb: 2 }}>
-                {displayRecipe?.name}
+                {getName(displayRecipe)}
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
                 {displayRecipe?.category && (
@@ -778,7 +835,7 @@ export default function RecipeDetails() {
                 >
                   <iframe
                     src={getYouTubeEmbedUrl(displayVideoURL) || undefined}
-                    title={`${displayRecipe?.name} - Video`}
+                    title={`${getName(displayRecipe)} - Video`}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
@@ -832,7 +889,13 @@ export default function RecipeDetails() {
                     borderRadius: 1,
                   }}
                 >
-                  {formData.ingredients.map((ing, index) => (
+                  {getSortedIngredients(formData.ingredients).map((ing, index) => {
+                    // Encontrar el índice original en formData.ingredients para mantener la referencia correcta
+                    const originalIndex = formData.ingredients.findIndex(
+                      (origIng) => origIng.id === ing.id && origIng.measure === ing.measure
+                    );
+                    const actualIndex = originalIndex !== -1 ? originalIndex : index;
+                    return (
                     <Stack
                       key={`ingredient-${index}-${i18n.language}`}
                       direction="row"
@@ -960,8 +1023,8 @@ export default function RecipeDetails() {
                           return option === value;
                         }}
                         inputValue={
-                          ingredientInputValues[index] !== undefined
-                            ? ingredientInputValues[index]
+                          ingredientInputValues[actualIndex] !== undefined
+                            ? ingredientInputValues[actualIndex]
                             : ing.id
                             ? (() => {
                                 const ingData = allIngredientsData.find(
@@ -979,22 +1042,22 @@ export default function RecipeDetails() {
                           // Actualizar el estado del input para permitir escribir y filtrar
                           setIngredientInputValues((prev) => ({
                             ...prev,
-                            [index]: newInputValue,
+                            [actualIndex]: newInputValue,
                           }));
 
                           if (reason === "clear") {
                             // Cuando se limpia el campo
-                            updateIngredient(index, "id", "");
+                            updateIngredient(actualIndex, "id", "");
                             setIngredientInputValues((prev) => {
                               const newValues = { ...prev };
-                              delete newValues[index];
+                              delete newValues[actualIndex];
                               return newValues;
                             });
                           } else if (reason === "reset") {
                             // Cuando se resetea, limpiar el estado del input
                             setIngredientInputValues((prev) => {
                               const newValues = { ...prev };
-                              delete newValues[index];
+                              delete newValues[actualIndex];
                               return newValues;
                             });
                           }
@@ -1072,10 +1135,10 @@ export default function RecipeDetails() {
                               }
 
                               if (bestMatch && bestScore > 0) {
-                                updateIngredient(index, "id", bestMatch.id);
+                                updateIngredient(actualIndex, "id", bestMatch.id);
                                 setIngredientInputValues((prev) => {
                                   const newValues = { ...prev };
-                                  delete newValues[index];
+                                  delete newValues[actualIndex];
                                   return newValues;
                                 });
                               }
@@ -1089,7 +1152,7 @@ export default function RecipeDetails() {
                         placeholder="ej: 2 kg"
                         value={ing.measure}
                         onChange={(e) =>
-                          updateIngredient(index, "measure", e.target.value)
+                          updateIngredient(actualIndex, "measure", e.target.value)
                         }
                         sx={{
                           flex: 1,
@@ -1101,18 +1164,18 @@ export default function RecipeDetails() {
                       />
                       <IconButton
                         onClick={() => {
-                          removeIngredient(index);
+                          removeIngredient(actualIndex);
                           // Limpiar el estado del input cuando se elimina el ingrediente
                           setIngredientInputValues((prev) => {
                             const newValues = { ...prev };
-                            delete newValues[index];
+                            delete newValues[actualIndex];
                             // Reindexar los valores después de eliminar
                             const reindexed: Record<number, string> = {};
                             Object.keys(newValues).forEach((key) => {
                               const keyNum = parseInt(key);
-                              if (keyNum < index) {
+                              if (keyNum < actualIndex) {
                                 reindexed[keyNum] = newValues[keyNum];
-                              } else if (keyNum > index) {
+                              } else if (keyNum > actualIndex) {
                                 reindexed[keyNum - 1] = newValues[keyNum];
                               }
                             });
@@ -1125,7 +1188,8 @@ export default function RecipeDetails() {
                         🗑️
                       </IconButton>
                     </Stack>
-                  ))}
+                    );
+                  })}
                 </Box>
               </>
             ) : (
@@ -1134,7 +1198,7 @@ export default function RecipeDetails() {
                   {t("recipes.ingredientsLabel")}
                 </Typography>
                 <List key={`ingredients-${i18n.language}`}>
-                  {displayRecipe?.ingredients.map((ingredient, idx) => {
+                  {getSortedIngredients(displayRecipe?.ingredients || []).map((ingredient, idx) => {
                     // Buscar el ingrediente completo por id
                     const ingData = allIngredientsData.find(
                       (g) => g.id === ingredient.id
@@ -1237,7 +1301,7 @@ export default function RecipeDetails() {
 
       <WeekMealDialog
         open={weekDialogOpen}
-        recipeName={recipe?.name || ""}
+        recipeName={recipe ? (recipe.nameES || recipe.nameEN) : ""}
         onClose={() => setWeekDialogOpen(false)}
         onConfirm={handleWeekDialogConfirm}
       />

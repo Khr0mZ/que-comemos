@@ -55,7 +55,7 @@
     "editRecipe": "Editar Receta",
     "deleteRecipe": "Borrar Receta",
     "deleteRecipeMessage": "¿Seguro que quieres borrar esta receta?",
-    "titleLabel": "Título",
+    "nameLabel": "Nombre",
     "ingredientsLabel": "Ingredientes",
     "instructionsLabel": "Pasos",
     "tagsLabel": "Etiquetas",

@@ -12,16 +12,18 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import WarningDialog from "../components/WarningDialog";
 import { useSnackbar } from "../hooks/useSnackbar";
 import { clearWeek, removeRecipeFromWeek, useWeek } from "../hooks/useStorage";
-import type { DayOfWeek, MealType } from "../types";
+import { storage } from "../services/storage";
+import type { DayOfWeek, MealType, Recipe } from "../types";
+import { getRecipeName } from "../utils/recipeUtils";
 
 export default function Planning() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const { week, loading } = useWeek();
@@ -32,6 +34,7 @@ export default function Planning() {
     recipeName: string;
   } | null>(null);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [recipeCache, setRecipeCache] = useState<Map<string, Recipe>>(new Map());
 
   const days: { value: DayOfWeek; label: string }[] = [
     { value: "monday", label: t("week.days.monday") },
@@ -128,6 +131,30 @@ export default function Planning() {
     },
     [navigate]
   );
+
+  // Cargar recetas para mostrar nombres según idioma
+  useEffect(() => {
+    const loadRecipes = async () => {
+      const allRecipes = await storage.loadRecipes();
+      const cache = new Map<string, Recipe>();
+      allRecipes.forEach((recipe) => {
+        const identifier = recipe.nameES || recipe.nameEN;
+        if (identifier) {
+          cache.set(identifier, recipe);
+        }
+      });
+      setRecipeCache(cache);
+    };
+    loadRecipes();
+  }, [week]);
+
+  const getDisplayName = useCallback((recipeName: string): string => {
+    const recipe = recipeCache.get(recipeName);
+    if (recipe) {
+      return getRecipeName(recipe, i18n.language || "es");
+    }
+    return recipeName;
+  }, [recipeCache, i18n.language]);
 
   if (loading) {
     return (
@@ -299,7 +326,7 @@ export default function Planning() {
                           meals.map((mealItem, index) => (
                             <Chip
                               key={`${mealItem.recipeName}-${index}`}
-                              label={mealItem.recipeName}
+                              label={getDisplayName(mealItem.recipeName)}
                               onClick={() =>
                                 handleViewRecipe(mealItem.recipeName)
                               }
@@ -364,13 +391,13 @@ export default function Planning() {
         message={
           recipeToDelete
             ? t("week.removeRecipeMessage", {
-                recipe: recipeToDelete.recipeName,
+                recipe: getDisplayName(recipeToDelete.recipeName),
                 day: days.find((d) => d.value === recipeToDelete.day)?.label,
                 meal: mealTypes.find((m) => m.value === recipeToDelete.mealType)
                   ?.label,
               }) ||
               `¿Estás seguro de querer eliminar "${
-                recipeToDelete.recipeName
+                getDisplayName(recipeToDelete.recipeName)
               }" del ${
                 days.find((d) => d.value === recipeToDelete.day)?.label
               } (${

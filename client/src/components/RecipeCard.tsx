@@ -2,6 +2,7 @@ import { Box, Card, CardMedia, Chip, Divider, IconButton, Skeleton, Typography }
 import { memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Recipe } from '../types'
+import { getRecipeName } from '../utils/recipeUtils'
 
 interface RecipeCardProps {
     recipe: Recipe
@@ -12,9 +13,10 @@ interface RecipeCardProps {
 }
 
 function RecipeCard({ recipe, onView, onEdit, onDelete, showActions = true }: RecipeCardProps) {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const [imageLoading, setImageLoading] = useState(true)
     const [imageError, setImageError] = useState(false)
+    const recipeName = getRecipeName(recipe, i18n.language || "es")
 
     return (
         <Card
@@ -40,7 +42,7 @@ function RecipeCard({ recipe, onView, onEdit, onDelete, showActions = true }: Re
                         component="img"
                         height="200"
                         image={recipe.imageURL}
-                        alt={recipe.name}
+                        alt={recipeName}
                         loading="lazy"
                         onLoad={() => setImageLoading(false)}
                         onError={() => {
@@ -80,7 +82,7 @@ function RecipeCard({ recipe, onView, onEdit, onDelete, showActions = true }: Re
                 }}
             >
                 <Typography variant="h6" component="div" sx={{ mb: 1 }}>
-                    {recipe.name}
+                    {recipeName}
                 </Typography>
                 <Box
                     sx={{
@@ -136,7 +138,8 @@ function RecipeCard({ recipe, onView, onEdit, onDelete, showActions = true }: Re
                                 size="small"
                                 onClick={(e) => {
                                     e.stopPropagation()
-                                    onDelete(recipe.name)
+                                    // Usar nameES como identificador para eliminar
+                                    onDelete(recipe.nameES || recipe.nameEN)
                                 }}
                                 sx={{ fontSize: '1.3rem' }}
                             >

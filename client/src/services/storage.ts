@@ -12,6 +12,13 @@ import type {
 } from "../types";
 import { apiRequest } from "../utils/api";
 
+/**
+ * Obtener el identificador único de una receta (nameES como principal, nameEN como fallback)
+ */
+function getRecipeIdentifier(recipe: Recipe): string {
+  return recipe.nameES || recipe.nameEN || "";
+}
+
 // Cache en memoria para los datos cargados por usuario
 // Estructura: { [userId]: { ingredients: [...], recipes: [...], shoppingList: {...}, week: {...} } }
 const cacheByUser: Record<string, {
@@ -276,8 +283,9 @@ class JSONFileService {
    */
   async addRecipe(recipe: Recipe): Promise<Recipe> {
     const recipes = await this.loadRecipes();
-    // Verificar si ya existe una receta con el mismo nombre
-    const existingIndex = recipes.findIndex((rec) => rec.name === recipe.name);
+    const recipeId = getRecipeIdentifier(recipe);
+    // Verificar si ya existe una receta con el mismo identificador
+    const existingIndex = recipes.findIndex((rec) => getRecipeIdentifier(rec) === recipeId);
     if (existingIndex !== -1) {
       // Si existe, actualizarla en lugar de agregarla
       const updatedRecipes = recipes.map((rec, i) =>
@@ -292,24 +300,24 @@ class JSONFileService {
   }
 
   /**
-   * Actualizar una receta por nombre
+   * Actualizar una receta por identificador (nameES o nameEN)
    */
-  async updateRecipe(name: string, updates: Partial<Recipe>): Promise<void> {
+  async updateRecipe(identifier: string, updates: Partial<Recipe>): Promise<void> {
     const recipes = await this.loadRecipes();
-    const index = recipes.findIndex((rec) => rec.name === name);
+    const index = recipes.findIndex((rec) => getRecipeIdentifier(rec) === identifier);
     if (index === -1) {
-      throw new Error(`Recipe with name ${name} not found`);
+      throw new Error(`Recipe with identifier ${identifier} not found`);
     }
     recipes[index] = { ...recipes[index], ...updates };
     await this.saveRecipes(recipes);
   }
 
   /**
-   * Eliminar una receta por nombre
+   * Eliminar una receta por identificador (nameES o nameEN)
    */
-  async deleteRecipe(name: string): Promise<void> {
+  async deleteRecipe(identifier: string): Promise<void> {
     const recipes = await this.loadRecipes();
-    const filtered = recipes.filter((rec) => rec.name !== name);
+    const filtered = recipes.filter((rec) => getRecipeIdentifier(rec) !== identifier);
     await this.saveRecipes(filtered);
   }
 
@@ -321,11 +329,11 @@ class JSONFileService {
   }
 
   /**
-   * Obtener una receta por nombre
+   * Obtener una receta por identificador (nameES o nameEN)
    */
-  async getRecipe(name: string): Promise<Recipe | undefined> {
+  async getRecipe(identifier: string): Promise<Recipe | undefined> {
     const recipes = await this.loadRecipes();
-    return recipes.find((rec) => rec.name === name);
+    return recipes.find((rec) => getRecipeIdentifier(rec) === identifier);
   }
 
   /**
@@ -540,6 +548,7 @@ class JSONFileService {
 
   /**
    * Agregar lista de compra para una receta confirmada
+   * recipeName debe ser el identificador (nameES o nameEN)
    */
   async addRecipeShoppingList(
     recipeName: string,

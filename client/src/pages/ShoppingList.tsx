@@ -20,12 +20,13 @@ import {
   useWeek,
 } from "../hooks/useStorage";
 import { storage } from "../services/storage";
-import type { Ingredient } from "../types";
+import type { Ingredient, Recipe } from "../types";
 import {
   getAllIngredients,
 } from "../utils/ingredientTranslations";
 import type { IngredientData } from "../utils/ingredientTranslations";
 import { getRandomColorFromString } from "../utils/colorUtils";
+import { getRecipeName } from "../utils/recipeUtils";
 
 export default function ShoppingList() {
   const { t, i18n } = useTranslation();
@@ -39,10 +40,35 @@ export default function ShoppingList() {
   const [deleteRecipeDialogOpen, setDeleteRecipeDialogOpen] = useState(false);
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
   const [allIngredientsData, setAllIngredientsData] = useState<IngredientData[]>([]);
+  const [recipeCache, setRecipeCache] = useState<Map<string, Recipe>>(new Map());
 
   useEffect(() => {
     getAllIngredients().then(setAllIngredientsData);
   }, []);
+
+  // Cargar recetas para mostrar nombres según idioma
+  useEffect(() => {
+    const loadRecipes = async () => {
+      const allRecipes = await storage.loadRecipes();
+      const cache = new Map<string, Recipe>();
+      allRecipes.forEach((recipe) => {
+        const identifier = recipe.nameES || recipe.nameEN;
+        if (identifier) {
+          cache.set(identifier, recipe);
+        }
+      });
+      setRecipeCache(cache);
+    };
+    loadRecipes();
+  }, [shoppingList.recipeLists]);
+
+  const getDisplayName = useCallback((recipeName: string): string => {
+    const recipe = recipeCache.get(recipeName);
+    if (recipe) {
+      return getRecipeName(recipe, i18n.language || "es");
+    }
+    return recipeName;
+  }, [recipeCache, i18n.language]);
 
   // Ordenar las recetas según el orden en Planning (días de la semana y luego lunch/dinner)
   const orderedRecipeLists = useMemo(() => {
@@ -355,7 +381,7 @@ export default function ShoppingList() {
                             : "▶"}
                         </IconButton>
                         <Typography variant="h6">
-                          {recipeList.recipeName}
+                          {getDisplayName(recipeList.recipeName)}
                           {recipeCounts[recipeList.recipeName] > 1 && (
                             <Box
                               component="span"
