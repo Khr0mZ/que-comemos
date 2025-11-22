@@ -58,6 +58,7 @@ export default function RecipeDetails() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Recipe>({
     name: "",
     ingredients: [],
@@ -266,9 +267,10 @@ export default function RecipeDetails() {
   };
 
   const handleSaveEdit = async () => {
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim() || isSaving) return;
 
     try {
+      setIsSaving(true);
       const recipeToSave: Recipe = {
         name: formData.name,
         ingredients: formData.ingredients,
@@ -282,6 +284,7 @@ export default function RecipeDetails() {
         category: formData.category || "",
         area: formData.area || "",
         source: isCreating ? "local" : recipe?.source || "local",
+        internal: isCreating ? true : recipe?.internal, // Marcar como interna si es nueva receta
       };
 
       if (isCreating) {
@@ -294,12 +297,13 @@ export default function RecipeDetails() {
         const originalName = recipe.name;
         await updateRecipe(originalName, recipeToSave);
         setRecipe(recipeToSave);
-        setIsEditing(false);
         setIsCreating(false);
         // Recargar disponibilidad con la receta actualizada
         const updatedAvailability = await checkRecipeAvailability(recipeToSave);
         setAvailability(updatedAvailability);
         showSnackbar(t("recipes.saveRecipe") + "!", "success");
+        // Cerrar modo edición después de guardar
+        setIsEditing(false);
       }
     } catch (error) {
       console.error("Error saving recipe:", error);
@@ -309,6 +313,8 @@ export default function RecipeDetails() {
           (error instanceof Error ? error.message : "Error desconocido"),
         "error"
       );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -409,9 +415,12 @@ export default function RecipeDetails() {
           mb: 2,
         }}
       >
-        <Button variant="outlined" onClick={() => navigate(-1)}>
-          {t("common.back")}
-        </Button>
+        {!isEditing && (
+          <Button variant="outlined" onClick={() => navigate("/recipes")}>
+            {t("common.back")}
+          </Button>
+        )}
+        {isEditing && <Box />}
         {!isEditing && !isNewRecipe && (canEdit || availability) && (
           <Stack direction="row" spacing={1}>
             {canEdit && (
@@ -431,11 +440,24 @@ export default function RecipeDetails() {
         )}
         {isEditing && (
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" onClick={handleCancelEdit}>
+            <Button
+              variant="outlined"
+              onClick={handleCancelEdit}
+              disabled={isSaving}
+            >
               {t("common.cancel")}
             </Button>
-            <Button variant="contained" onClick={handleSaveEdit}>
-              {t("common.save")}
+            <Button
+              variant="contained"
+              onClick={handleSaveEdit}
+              disabled={isSaving}
+              sx={{ minWidth: 100 }}
+            >
+              {isSaving ? (
+                <CircularProgress size={20} sx={{ color: "inherit" }} />
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </Stack>
         )}

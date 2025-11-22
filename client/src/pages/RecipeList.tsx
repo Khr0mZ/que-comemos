@@ -8,6 +8,7 @@ import {
   Chip,
   Container,
   FormControlLabel,
+  Skeleton,
   Stack,
   TextField,
   Typography,
@@ -53,6 +54,7 @@ export default function RecipeList() {
   const [selectedArea, setSelectedArea] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [showOnlyInternal, setShowOnlyInternal] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [areas, setAreas] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
@@ -62,10 +64,13 @@ export default function RecipeList() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
+  const [isDeletingRecipe, setIsDeletingRecipe] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [isResettingRecipes, setIsResettingRecipes] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [isDeletingAllRecipes, setIsDeletingAllRecipes] = useState(false);
 
-  const { recipes: allRecipes } = useRecipes();
+  const { recipes: allRecipes, loading: recipesLoading } = useRecipes();
   const { ingredients: allIngredients } = useIngredients();
 
   useEffect(() => {
@@ -138,6 +143,11 @@ export default function RecipeList() {
       filtered = filterRecipesByTags(filtered, selectedTags);
     }
 
+    // Filter by internal
+    if (showOnlyInternal) {
+      filtered = filtered.filter((recipe) => recipe.internal === true);
+    }
+
     return filtered;
   }, [
     allRecipes,
@@ -146,6 +156,7 @@ export default function RecipeList() {
     selectedArea,
     selectedTags,
     selectedIngredients,
+    showOnlyInternal,
   ]);
 
   // Reset visible count when filters change
@@ -160,6 +171,7 @@ export default function RecipeList() {
     selectedArea,
     selectedTags,
     selectedIngredients,
+    showOnlyInternal,
   ]);
 
   // Get visible recipes for infinite scroll
@@ -207,10 +219,17 @@ export default function RecipeList() {
 
   const confirmDelete = useCallback(async () => {
     if (recipeToDelete) {
-      await deleteRecipe(recipeToDelete);
-      setRecipeToDelete(null);
+      try {
+        setIsDeletingRecipe(true);
+        await deleteRecipe(recipeToDelete);
+        setRecipeToDelete(null);
+        setDeleteDialogOpen(false);
+      } catch (error) {
+        console.error("Error deleting recipe:", error);
+      } finally {
+        setIsDeletingRecipe(false);
+      }
     }
-    setDeleteDialogOpen(false);
   }, [recipeToDelete]);
 
   const cancelDelete = useCallback(() => {
@@ -224,10 +243,13 @@ export default function RecipeList() {
 
   const confirmReset = useCallback(async () => {
     try {
+      setIsResettingRecipes(true);
       await resetRecipes();
       setResetDialogOpen(false);
     } catch (error) {
       console.error("Error resetting recipes:", error);
+    } finally {
+      setIsResettingRecipes(false);
     }
   }, []);
 
@@ -241,10 +263,13 @@ export default function RecipeList() {
 
   const confirmDeleteAll = useCallback(async () => {
     try {
+      setIsDeletingAllRecipes(true);
       await deleteAllRecipes();
       setDeleteAllDialogOpen(false);
     } catch (error) {
       console.error("Error deleting all recipes:", error);
+    } finally {
+      setIsDeletingAllRecipes(false);
     }
   }, []);
 
@@ -270,16 +295,27 @@ export default function RecipeList() {
     setDeleteAllDialogOpen(false);
   }, []);
 
-  // Attach scroll listener to window
+  // Attach scroll listener to window with throttling
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
+    let ticking = false;
+    const throttledScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", throttledScroll, { passive: true });
     // Also check on mount in case content is already scrolled
     const timer = setTimeout(() => {
       handleScroll();
     }, 0);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", throttledScroll);
     };
   }, [handleScroll]);
 
@@ -346,22 +382,40 @@ export default function RecipeList() {
       <Box sx={{ mb: 3 }}>
         <Card sx={{ p: 2, mb: 2 }}>
           <Stack spacing={2}>
-            <TextField
-              fullWidth
-              placeholder={t("recipes.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={getTextFieldColorStyles("recipes.searchPlaceholder")}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <span style={{ fontSize: "1.2rem", marginRight: "8px" }}>
-                      🔍
-                    </span>
-                  ),
-                },
-              }}
-            />
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+              <TextField
+                fullWidth
+                placeholder={t("recipes.searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={getTextFieldColorStyles("recipes.searchPlaceholder"), { flex: 1, minWidth: 200 }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <span style={{ fontSize: "1.2rem", marginRight: "8px" }}>
+                        🔍
+                      </span>
+                    ),
+                  },
+                }}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={showOnlyInternal}
+                    onChange={(e) => setShowOnlyInternal(e.target.checked)}
+                    sx={{
+                      color: "#FF1744",
+                      "&.Mui-checked": {
+                        color: "#FF1744",
+                      },
+                    }}
+                  />
+                }
+                label={t("recipes.showOnlyInternal") || "Solo recetas internas"}
+                sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+              />
+            </Box>
 
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Autocomplete
@@ -571,7 +625,44 @@ export default function RecipeList() {
         </Card>
       </Box>
 
-      {recipes.length === 0 && (
+      {recipesLoading && (
+        <Box sx={{ mb: 4 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+                lg: "repeat(4, 1fr)",
+              },
+              gap: 2,
+            }}
+          >
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Card key={`skeleton-${index}`} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Skeleton variant="rectangular" width="100%" height={200} />
+                <Box sx={{ px: 1, py: 1.5, display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1 }} />
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                    <Skeleton variant="rounded" width={60} height={24} />
+                    <Skeleton variant="rounded" width={60} height={24} />
+                    <Skeleton variant="rounded" width={60} height={24} />
+                  </Box>
+                </Box>
+                <Box sx={{ mt: 'auto' }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', p: 1 }}>
+                    <Skeleton variant="circular" width={32} height={32} />
+                    <Skeleton variant="circular" width={32} height={32} />
+                  </Box>
+                </Box>
+              </Card>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {!recipesLoading && recipes.length === 0 && (
         <Card>
           <CardContent>
             <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
@@ -581,7 +672,7 @@ export default function RecipeList() {
         </Card>
       )}
 
-      {recipes.length > 0 && (
+      {!recipesLoading && recipes.length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Box
             ref={containerRef}
@@ -631,6 +722,7 @@ export default function RecipeList() {
         message={t("recipes.deleteRecipeMessage")}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
+        loading={isDeletingRecipe}
       />
 
       <WarningDialog
@@ -639,6 +731,7 @@ export default function RecipeList() {
         message={t("recipes.resetRecipesMessage")}
         onConfirm={confirmReset}
         onCancel={cancelReset}
+        loading={isResettingRecipes}
       />
 
       <WarningDialog
@@ -647,6 +740,7 @@ export default function RecipeList() {
         message={t("recipes.deleteAllRecipesMessage")}
         onConfirm={confirmDeleteAll}
         onCancel={cancelDeleteAll}
+        loading={isDeletingAllRecipes}
       />
     </Container>
   );

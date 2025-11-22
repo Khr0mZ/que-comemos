@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import i18n from "../i18n/config";
 import { storage } from "../services/storage";
+import { syncService } from "../services/sync";
 import type {
   DayOfWeek,
   Ingredient,
@@ -20,11 +21,12 @@ export { storage };
 export function useIngredients() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(storage.getUserId());
 
-  const loadIngredients = useCallback(async () => {
+  const loadIngredients = useCallback(async (forceReload = false) => {
     try {
-      // Cargar desde el cache (que ya está actualizado cuando se dispara el evento)
-      const data = await storage.loadIngredients(false);
+      // Si es una recarga forzada (por sincronización remota), cargar desde la API
+      const data = await storage.loadIngredients(forceReload);
       // Usar JSON.parse/stringify para crear una copia completamente nueva
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
@@ -74,18 +76,50 @@ export function useIngredients() {
       loadIngredientsRef.current();
     };
 
+    // Escuchar cambios locales
     window.addEventListener(
       "que-comemos-ingredients-changed",
       handleCustomStorageChange
     );
+
+    // Escuchar cambios remotos (sincronización)
+    const unsubscribeSync = syncService.onDataChange('ingredients', () => {
+      loadIngredientsRef.current(true); // Forzar recarga desde API
+    });
 
     return () => {
       window.removeEventListener(
         "que-comemos-ingredients-changed",
         handleCustomStorageChange
       );
+      unsubscribeSync();
     };
   }, [loadIngredients]);
+
+  // Escuchar cambios en el userId y recargar cuando cambie
+  useEffect(() => {
+    const checkUserId = () => {
+      const currentUserId = storage.getUserId();
+      if (currentUserId !== userId) {
+        setUserId(currentUserId);
+        // Si el userId cambió, recargar los datos
+        if (currentUserId) {
+          loadIngredientsRef.current(true);
+        } else {
+          setIngredients([]);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Verificar userId periódicamente cuando no hay userId inicial
+    const interval = setInterval(checkUserId, 100);
+    
+    // También verificar inmediatamente
+    checkUserId();
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   return { ingredients, loading, refresh: loadIngredients };
 }
@@ -96,12 +130,13 @@ export function useIngredients() {
 export function useRecipes() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(storage.getUserId());
 
-  const loadRecipes = useCallback(async () => {
+  const loadRecipes = useCallback(async (forceReload = false) => {
     try {
       setLoading(true);
-      // Cargar desde el cache (que ya está actualizado cuando se dispara el evento)
-      const data = await storage.loadRecipes(false);
+      // Si es una recarga forzada (por sincronización remota), cargar desde la API
+      const data = await storage.loadRecipes(forceReload);
       // Usar JSON.parse/stringify para crear una copia completamente nueva
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
@@ -136,18 +171,50 @@ export function useRecipes() {
       loadRecipesRef.current();
     };
 
+    // Escuchar cambios locales
     window.addEventListener(
       "que-comemos-recipes-changed",
       handleCustomStorageChange
     );
+
+    // Escuchar cambios remotos (sincronización)
+    const unsubscribeSync = syncService.onDataChange('recipes', () => {
+      loadRecipesRef.current(true); // Forzar recarga desde API
+    });
 
     return () => {
       window.removeEventListener(
         "que-comemos-recipes-changed",
         handleCustomStorageChange
       );
+      unsubscribeSync();
     };
   }, [loadRecipes]);
+
+  // Escuchar cambios en el userId y recargar cuando cambie
+  useEffect(() => {
+    const checkUserId = () => {
+      const currentUserId = storage.getUserId();
+      if (currentUserId !== userId) {
+        setUserId(currentUserId);
+        // Si el userId cambió, recargar los datos
+        if (currentUserId) {
+          loadRecipesRef.current(true);
+        } else {
+          setRecipes([]);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Verificar userId periódicamente cuando no hay userId inicial
+    const interval = setInterval(checkUserId, 100);
+    
+    // También verificar inmediatamente
+    checkUserId();
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   return { recipes, loading, refresh: loadRecipes };
 }
@@ -231,12 +298,12 @@ export function useShoppingList() {
     recipeLists: [],
   });
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(storage.getUserId());
 
-  const loadShoppingList = useCallback(async () => {
+  const loadShoppingList = useCallback(async (forceReload = false) => {
     try {
-      // Cargar desde el cache (que ya está actualizado cuando se dispara el evento)
-      // Pero también verificar el archivo periódicamente para detectar cambios desde otros dispositivos
-      const data = await storage.loadShoppingList(false);
+      // Si es una recarga forzada (por sincronización remota), cargar desde la API
+      const data = await storage.loadShoppingList(forceReload);
       // Usar JSON.parse/stringify para crear una copia completamente nueva
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
@@ -262,18 +329,50 @@ export function useShoppingList() {
       loadShoppingListRef.current();
     };
 
+    // Escuchar cambios locales
     window.addEventListener(
       "que-comemos-shopping-list-changed",
       handleShoppingListChange
     );
+
+    // Escuchar cambios remotos (sincronización)
+    const unsubscribeSync = syncService.onDataChange('shopping-list', () => {
+      loadShoppingListRef.current(true); // Forzar recarga desde API
+    });
 
     return () => {
       window.removeEventListener(
         "que-comemos-shopping-list-changed",
         handleShoppingListChange
       );
+      unsubscribeSync();
     };
   }, [loadShoppingList]);
+
+  // Escuchar cambios en el userId y recargar cuando cambie
+  useEffect(() => {
+    const checkUserId = () => {
+      const currentUserId = storage.getUserId();
+      if (currentUserId !== userId) {
+        setUserId(currentUserId);
+        // Si el userId cambió, recargar los datos
+        if (currentUserId) {
+          loadShoppingListRef.current(true);
+        } else {
+          setShoppingList({ generalItems: [], recipeLists: [] });
+          setLoading(false);
+        }
+      }
+    };
+
+    // Verificar userId periódicamente cuando no hay userId inicial
+    const interval = setInterval(checkUserId, 100);
+    
+    // También verificar inmediatamente
+    checkUserId();
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   return { shoppingList, loading, refresh: loadShoppingList };
 }
@@ -292,11 +391,12 @@ export function useWeek() {
     sunday: { lunch: [], dinner: [] },
   });
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(storage.getUserId());
 
-  const loadWeek = useCallback(async () => {
+  const loadWeek = useCallback(async (forceReload = false) => {
     try {
-      // Cargar desde el cache (que ya está actualizado cuando se dispara el evento)
-      const data = await storage.loadWeek(false);
+      // Si es una recarga forzada (por sincronización remota), cargar desde la API
+      const data = await storage.loadWeek(forceReload);
       // Usar JSON.parse/stringify para crear una copia completamente nueva
       // Esto asegura que React siempre detecte el cambio
       const newData = JSON.parse(JSON.stringify(data));
@@ -322,12 +422,52 @@ export function useWeek() {
       loadWeekRef.current();
     };
 
+    // Escuchar cambios locales
     window.addEventListener("que-comemos-week-changed", handleWeekChange);
+
+    // Escuchar cambios remotos (sincronización)
+    const unsubscribeSync = syncService.onDataChange('week', () => {
+      loadWeekRef.current(true); // Forzar recarga desde API
+    });
 
     return () => {
       window.removeEventListener("que-comemos-week-changed", handleWeekChange);
+      unsubscribeSync();
     };
   }, [loadWeek]);
+
+  // Escuchar cambios en el userId y recargar cuando cambie
+  useEffect(() => {
+    const checkUserId = () => {
+      const currentUserId = storage.getUserId();
+      if (currentUserId !== userId) {
+        setUserId(currentUserId);
+        // Si el userId cambió, recargar los datos
+        if (currentUserId) {
+          loadWeekRef.current(true);
+        } else {
+          setWeek({
+            monday: { lunch: [], dinner: [] },
+            tuesday: { lunch: [], dinner: [] },
+            wednesday: { lunch: [], dinner: [] },
+            thursday: { lunch: [], dinner: [] },
+            friday: { lunch: [], dinner: [] },
+            saturday: { lunch: [], dinner: [] },
+            sunday: { lunch: [], dinner: [] },
+          });
+          setLoading(false);
+        }
+      }
+    };
+
+    // Verificar userId periódicamente cuando no hay userId inicial
+    const interval = setInterval(checkUserId, 100);
+    
+    // También verificar inmediatamente
+    checkUserId();
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   return { week, loading, refresh: loadWeek };
 }

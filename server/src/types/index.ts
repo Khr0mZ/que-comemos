@@ -1,4 +1,5 @@
-// Tipos principales de la aplicación
+// Tipos compartidos con el cliente
+// Estos tipos deben coincidir con los del cliente
 
 export interface Ingredient {
   id: string;
@@ -41,27 +42,14 @@ export interface ShoppingListItem {
   measure: string;
 }
 
-export interface InventoryIngredientMatch {
-  recipeIngredientName: string; // ID del ingrediente en la receta
-  recipeIngredientMeasure: string; // Medida requerida en la receta
-  inventoryIngredient: Ingredient; // Ingrediente del inventario que coincide
-}
-
-export interface RecipeAvailability {
-  recipe: Recipe;
-  missingIngredients: ShoppingListItem[];
-  availableIngredients: InventoryIngredientMatch[]; // Ingredientes del inventario que se usan en la receta
-  availabilityStatus: "available" | "partial" | "unavailable";
-}
-
 export interface ConfirmedRecipeShoppingList {
   recipeName: string;
   items: ShoppingListItem[];
 }
 
 export interface ShoppingListData {
-  generalItems: ShoppingListItem[]; // Ingredientes sin receta
-  recipeLists: ConfirmedRecipeShoppingList[]; // Listas por receta confirmada
+  generalItems: ShoppingListItem[];
+  recipeLists: ConfirmedRecipeShoppingList[];
 }
 
 export type DayOfWeek =
@@ -72,6 +60,7 @@ export type DayOfWeek =
   | "friday"
   | "saturday"
   | "sunday";
+
 export type MealType = "lunch" | "dinner";
 
 export interface WeekMeal {
@@ -93,3 +82,4 @@ export interface WeekData {
   saturday: WeekDayMeals;
   sunday: WeekDayMeals;
 }
+

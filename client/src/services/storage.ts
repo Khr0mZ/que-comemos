@@ -10,6 +10,7 @@ import type {
   WeekDayMeals,
   WeekMeal,
 } from "../types";
+import { apiRequest } from "../utils/api";
 
 // Cache en memoria para los datos cargados por usuario
 // Estructura: { [userId]: { ingredients: [...], recipes: [...], shoppingList: {...}, week: {...} } }
@@ -29,19 +30,9 @@ function getCurrentUserId(): string | null {
   return localStorage.getItem('que-comemos-user-id') || null;
 }
 
-/**
- * Obtener la ruta base para los archivos JSON del usuario
- */
-function getUserDbPath(userId: string | null): string {
-  if (!userId) {
-    // Si no hay userId, usar un directorio temporal o lanzar error
-    throw new Error('Usuario no autenticado');
-  }
-  return `../db/${userId}`;
-}
 
 /**
- * Servicio de almacenamiento usando archivos JSON en la carpeta db/{userId}
+ * Servicio de almacenamiento usando APIs REST del servidor backend
  */
 class JSONFileService {
   private userId: string | null = null;
@@ -84,7 +75,7 @@ class JSONFileService {
     return cacheByUser[userId];
   }
   /**
-   * Cargar ingredientes desde el archivo JSON del usuario
+   * Cargar ingredientes desde la API
    */
   async loadIngredients(forceReload = false): Promise<Ingredient[]> {
     const userId = this.getUserId();
@@ -94,28 +85,26 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Si hay cache, devolver una copia nueva para asegurar que React detecte cambios
+    // Si hay cache y no se fuerza recarga, devolver una copia nueva
     if (userCache.ingredients && !forceReload) {
       return userCache.ingredients.map((ing) => ({ ...ing }));
     }
 
-    // Solo cargar desde archivo si no hay cache
+    // Cargar desde la API
     try {
-      const dbPath = getUserDbPath(userId);
-      const ingredientsModule = await import(/* @vite-ignore */ `${dbPath}/ingredients.json`);
-      const ingredients = (ingredientsModule.default || []) as Ingredient[];
-      userCache.ingredients = ingredients;
+      const ingredients = await apiRequest<Ingredient[]>('/api/ingredients');
+      userCache.ingredients = ingredients || [];
       return userCache.ingredients.map((ing) => ({ ...ing }));
     } catch (error) {
-      console.error("Error loading ingredients from JSON file:", error);
-      // Si el archivo no existe, retornar array vacío
+      console.error("Error loading ingredients from API:", error);
+      // Si hay error, retornar array vacío
       userCache.ingredients = [];
       return [];
     }
   }
 
   /**
-   * Guardar ingredientes (actualiza el cache y escribe al archivo)
+   * Guardar ingredientes (guardado optimista: actualiza UI primero, luego guarda en servidor)
    */
   async saveIngredients(ingredients: Ingredient[]): Promise<void> {
     const userId = this.getUserId();
@@ -125,13 +114,10 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Crear una copia nueva del array para evitar referencias compartidas
-    // Esto asegura que siempre tengamos una nueva referencia
+    // GUARDADO OPTIMISTA: Actualizar cache inmediatamente para que la UI se actualice
     userCache.ingredients = ingredients.map((ing) => ({ ...ing }));
 
-    // Notificar cambio INMEDIATAMENTE después de actualizar el cache
-    // Usar requestAnimationFrame para asegurar que el evento se dispare
-    // en el siguiente frame de renderizado
+    // Notificar cambio INMEDIATAMENTE para actualizar la UI
     requestAnimationFrame(() => {
       window.dispatchEvent(
         new CustomEvent("que-comemos-ingredients-changed", {
@@ -140,27 +126,17 @@ class JSONFileService {
       );
     });
 
-    // Intentar guardar en el archivo JSON (solo funciona en desarrollo)
-    // Esto se hace después de notificar para no bloquear la UI
+    // Guardar en la API en segundo plano (no bloquea la UI)
     try {
-      const response = await fetch("/api/save-ingredients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, data: ingredients }),
+      await apiRequest('/api/ingredients', {
+        method: 'POST',
+        body: JSON.stringify(ingredients),
       });
-
-      if (!response.ok) {
-        console.warn(
-          "No se pudo guardar en el archivo (esto es normal en producción)"
-        );
-      }
-    } catch {
-      // En producción o si el servidor no está disponible, solo actualizamos el cache
-      console.warn(
-        "No se pudo guardar en el archivo (esto es normal en producción)"
-      );
+    } catch (error) {
+      console.error("Error guardando ingredientes en la API:", error);
+      // En caso de error, podríamos revertir el cambio o mostrar una notificación
+      // Por ahora, solo logueamos el error
+      throw error;
     }
   }
 
@@ -234,7 +210,7 @@ class JSONFileService {
   }
 
   /**
-   * Cargar recetas desde el archivo JSON del usuario
+   * Cargar recetas desde la API
    */
   async loadRecipes(forceReload = false): Promise<Recipe[]> {
     const userId = this.getUserId();
@@ -244,27 +220,24 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Si hay cache y no se fuerza recarga, devolver una copia nueva para asegurar que React detecte cambios
+    // Si hay cache y no se fuerza recarga, devolver una copia nueva
     if (userCache.recipes && !forceReload) {
       return userCache.recipes.map((rec) => ({ ...rec }));
     }
 
     try {
-      const dbPath = getUserDbPath(userId);
-      const recipesModule = await import(/* @vite-ignore */ `${dbPath}/recipes.json`);
-      const recipes = (recipesModule.default || []) as Recipe[];
-      userCache.recipes = recipes;
+      const recipes = await apiRequest<Recipe[]>('/api/recipes');
+      userCache.recipes = recipes || [];
       return userCache.recipes.map((rec) => ({ ...rec }));
     } catch (error) {
-      console.error("Error loading recipes from JSON file:", error);
-      // Si el archivo no existe, retornar array vacío
+      console.error("Error loading recipes from API:", error);
       userCache.recipes = [];
       return [];
     }
   }
 
   /**
-   * Guardar recetas (actualiza el cache y escribe al archivo)
+   * Guardar recetas (guardado optimista: actualiza UI primero, luego guarda en servidor)
    */
   async saveRecipes(recipes: Recipe[]): Promise<void> {
     const userId = this.getUserId();
@@ -274,13 +247,10 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Crear una copia nueva del array para evitar referencias compartidas
-    // Esto asegura que siempre tengamos una nueva referencia
+    // GUARDADO OPTIMISTA: Actualizar cache inmediatamente
     userCache.recipes = recipes.map((rec) => ({ ...rec }));
 
-    // Notificar cambio INMEDIATAMENTE después de actualizar el cache
-    // Usar requestAnimationFrame para asegurar que el evento se dispare
-    // en el siguiente frame de renderizado
+    // Notificar cambio INMEDIATAMENTE para actualizar la UI
     requestAnimationFrame(() => {
       window.dispatchEvent(
         new CustomEvent("que-comemos-recipes-changed", {
@@ -289,27 +259,15 @@ class JSONFileService {
       );
     });
 
-    // Intentar guardar en el archivo JSON (solo funciona en desarrollo)
-    // Esto se hace después de notificar para no bloquear la UI
+    // Guardar en la API en segundo plano
     try {
-      const response = await fetch("/api/save-recipes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, data: recipes }),
+      await apiRequest('/api/recipes', {
+        method: 'POST',
+        body: JSON.stringify(recipes),
       });
-
-      if (!response.ok) {
-        console.warn(
-          "No se pudo guardar en el archivo (esto es normal en producción)"
-        );
-      }
-    } catch {
-      // En producción o si el servidor no está disponible, solo actualizamos el cache
-      console.warn(
-        "No se pudo guardar en el archivo (esto es normal en producción)"
-      );
+    } catch (error) {
+      console.error("Error guardando recetas en la API:", error);
+      throw error;
     }
   }
 
@@ -456,11 +414,11 @@ class JSONFileService {
   }
 
   /**
-   * Resetear recetas desde el archivo de datos original
+   * Resetear recetas desde los datos originales
    */
   async resetRecipes(): Promise<void> {
     try {
-      // Cargar desde el archivo de datos original
+      // Cargar desde los datos originales
       const originalRecipesModule = await import(
         "../data/recipes/recipes.json"
       );
@@ -475,7 +433,7 @@ class JSONFileService {
       const userCache = this.getUserCache();
       userCache.recipes = null;
 
-      // Guardar las recetas originales (esto sobrescribirá el archivo de db del usuario)
+      // Guardar las recetas originales
       await this.saveRecipes(originalRecipes);
     } catch (error) {
       console.error("Error resetting recipes:", error);
@@ -484,7 +442,7 @@ class JSONFileService {
   }
 
   /**
-   * Cargar lista de compra desde el archivo JSON del usuario
+   * Cargar lista de compra desde la API
    */
   async loadShoppingList(forceReload = false): Promise<ShoppingListData> {
     const userId = this.getUserId();
@@ -498,47 +456,29 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Si hay cache y no se fuerza recarga, devolver una copia nueva para asegurar que React detecte cambios
+    // Si hay cache y no se fuerza recarga, devolver una copia nueva
     if (userCache.shoppingList && !forceReload) {
       return JSON.parse(JSON.stringify(userCache.shoppingList));
     }
 
-    // Solo cargar desde archivo si no hay cache
     try {
-      const dbPath = getUserDbPath(userId);
-      const shoppingListModule = await import(/* @vite-ignore */ `${dbPath}/shopping-list.json`);
-      const shoppingList = (shoppingListModule.default ||
-        shoppingListModule) as ShoppingListData;
-      userCache.shoppingList = JSON.parse(JSON.stringify(shoppingList));
+      const shoppingList = await apiRequest<ShoppingListData>('/api/shopping-list');
+      const data = shoppingList || { generalItems: [], recipeLists: [] };
+      userCache.shoppingList = JSON.parse(JSON.stringify(data));
       return JSON.parse(JSON.stringify(userCache.shoppingList));
     } catch (error) {
-      console.error("Error loading shopping list from JSON file:", error);
-      // Fallback a localStorage si el archivo no está disponible
-      try {
-        const stored = localStorage.getItem(`que-comemos-shopping-list-${userId}`);
-        if (stored) {
-          const data = JSON.parse(stored);
-          userCache.shoppingList = JSON.parse(JSON.stringify(data));
-          return JSON.parse(JSON.stringify(userCache.shoppingList));
-        }
-      } catch (localError) {
-        console.error(
-          "Error loading shopping list from localStorage:",
-          localError
-        );
-      }
+      console.error("Error loading shopping list from API:", error);
+      const emptyData = {
+        generalItems: [],
+        recipeLists: [],
+      };
+      userCache.shoppingList = JSON.parse(JSON.stringify(emptyData));
+      return JSON.parse(JSON.stringify(emptyData));
     }
-
-    const emptyData = {
-      generalItems: [],
-      recipeLists: [],
-    };
-    userCache.shoppingList = JSON.parse(JSON.stringify(emptyData));
-    return JSON.parse(JSON.stringify(emptyData));
   }
 
   /**
-   * Guardar lista de compra en archivo JSON del usuario
+   * Guardar lista de compra (guardado optimista: actualiza UI primero, luego guarda en servidor)
    */
   async saveShoppingList(data: ShoppingListData): Promise<void> {
     const userId = this.getUserId();
@@ -548,13 +488,10 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Crear una copia nueva del objeto para evitar referencias compartidas
-    // Esto asegura que siempre tengamos una nueva referencia
+    // GUARDADO OPTIMISTA: Actualizar cache inmediatamente
     userCache.shoppingList = JSON.parse(JSON.stringify(data));
 
-    // Notificar cambio INMEDIATAMENTE después de actualizar el cache
-    // Usar requestAnimationFrame para asegurar que el evento se dispare
-    // en el siguiente frame de renderizado
+    // Notificar cambio INMEDIATAMENTE para actualizar la UI
     requestAnimationFrame(() => {
       window.dispatchEvent(
         new CustomEvent("que-comemos-shopping-list-changed", {
@@ -563,34 +500,15 @@ class JSONFileService {
       );
     });
 
-    // Intentar guardar en el archivo JSON (solo funciona en desarrollo)
-    // Esto se hace después de notificar para no bloquear la UI
+    // Guardar en la API en segundo plano
     try {
-      const response = await fetch("/api/save-shopping-list", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, data }),
+      await apiRequest('/api/shopping-list', {
+        method: 'POST',
+        body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save to file");
-      }
     } catch (error) {
-      console.warn(
-        "No se pudo guardar en el archivo, usando localStorage como fallback:",
-        error
-      );
-      // Fallback a localStorage si el archivo no está disponible
-      try {
-        localStorage.setItem("que-comemos-shopping-list", JSON.stringify(data));
-      } catch (localError) {
-        console.error(
-          "Error saving shopping list to localStorage:",
-          localError
-        );
-      }
+      console.error("Error guardando lista de compra en la API:", error);
+      throw error;
     }
   }
 
@@ -628,12 +546,18 @@ class JSONFileService {
     items: ShoppingListItem[]
   ): Promise<void> {
     const data = await this.loadShoppingList();
-    // Eliminar lista existente de la misma receta si existe
-    data.recipeLists = data.recipeLists.filter(
-      (list) => list.recipeName !== recipeName
+    // Buscar el índice de la receta existente para preservar el orden
+    const existingIndex = data.recipeLists.findIndex(
+      (list) => list.recipeName === recipeName
     );
-    // Agregar nueva lista
-    data.recipeLists.push({ recipeName, items });
+    
+    if (existingIndex !== -1) {
+      // Actualizar la lista existente en su posición original
+      data.recipeLists[existingIndex] = { recipeName, items };
+    } else {
+      // Si no existe, agregar al final
+      data.recipeLists.push({ recipeName, items });
+    }
     await this.saveShoppingList(data);
   }
 
@@ -704,7 +628,7 @@ class JSONFileService {
   }
 
   /**
-   * Cargar datos de la semana desde el archivo JSON del usuario
+   * Cargar datos de la semana desde la API
    */
   async loadWeek(forceReload = false): Promise<WeekData> {
     const userId = this.getUserId();
@@ -723,21 +647,26 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Si hay cache y no se fuerza recarga, devolver una copia nueva para asegurar que React detecte cambios
+    // Si hay cache y no se fuerza recarga, devolver una copia nueva
     if (userCache.week && !forceReload) {
       return JSON.parse(JSON.stringify(userCache.week));
     }
 
-    // Solo cargar desde archivo si no hay cache
     try {
-      const dbPath = getUserDbPath(userId);
-      const weekModule = await import(/* @vite-ignore */ `${dbPath}/week.json`);
-      const week = (weekModule.default || weekModule) as WeekData;
-      userCache.week = JSON.parse(JSON.stringify(week));
+      const week = await apiRequest<WeekData>('/api/week');
+      const weekData = week || {
+        monday: { lunch: [], dinner: [] },
+        tuesday: { lunch: [], dinner: [] },
+        wednesday: { lunch: [], dinner: [] },
+        thursday: { lunch: [], dinner: [] },
+        friday: { lunch: [], dinner: [] },
+        saturday: { lunch: [], dinner: [] },
+        sunday: { lunch: [], dinner: [] },
+      };
+      userCache.week = JSON.parse(JSON.stringify(weekData));
       return JSON.parse(JSON.stringify(userCache.week));
     } catch (error) {
-      console.error("Error loading week from JSON file:", error);
-      // Fallback a datos vacíos si el archivo no está disponible
+      console.error("Error loading week from API:", error);
       const emptyWeek: WeekData = {
         monday: { lunch: [], dinner: [] },
         tuesday: { lunch: [], dinner: [] },
@@ -753,7 +682,7 @@ class JSONFileService {
   }
 
   /**
-   * Guardar datos de la semana en archivo JSON del usuario
+   * Guardar datos de la semana (guardado optimista: actualiza UI primero, luego guarda en servidor)
    */
   async saveWeek(data: WeekData): Promise<void> {
     const userId = this.getUserId();
@@ -763,10 +692,10 @@ class JSONFileService {
 
     const userCache = this.getUserCache();
     
-    // Crear una copia nueva del objeto para evitar referencias compartidas
+    // GUARDADO OPTIMISTA: Actualizar cache inmediatamente
     userCache.week = JSON.parse(JSON.stringify(data));
 
-    // Notificar cambio INMEDIATAMENTE después de actualizar el cache
+    // Notificar cambio INMEDIATAMENTE para actualizar la UI
     requestAnimationFrame(() => {
       window.dispatchEvent(
         new CustomEvent("que-comemos-week-changed", {
@@ -775,30 +704,15 @@ class JSONFileService {
       );
     });
 
-    // Intentar guardar en el archivo JSON (solo funciona en desarrollo)
+    // Guardar en la API en segundo plano
     try {
-      const response = await fetch("/api/save-week", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, data }),
+      await apiRequest('/api/week', {
+        method: 'POST',
+        body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save to file");
-      }
     } catch (error) {
-      console.warn(
-        "No se pudo guardar en el archivo, usando localStorage como fallback:",
-        error
-      );
-      // Fallback a localStorage si el archivo no está disponible
-      try {
-        localStorage.setItem("que-comemos-week", JSON.stringify(data));
-      } catch (localError) {
-        console.error("Error saving week to localStorage:", localError);
-      }
+      console.error("Error guardando datos de la semana en la API:", error);
+      throw error;
     }
   }
 

@@ -13,7 +13,21 @@ i18n
       en: { translation: enTranslations },
       es: { translation: esTranslations },
     },
+    supportedLngs: ['en', 'es'],
     fallbackLng: 'es',
+    detection: {
+      // Orden de detección: localStorage -> navigator -> htmlTag -> fallback
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      // Cache del idioma en localStorage
+      caches: ['localStorage'],
+      // Buscar solo en el idioma base (en, es) sin variantes regionales
+      lookupLocalStorage: 'i18nextLng',
+      // Verificar que el idioma guardado sea válido
+      checkWhitelist: true,
+    },
+    // Convertir automáticamente variantes de idioma a idiomas base soportados
+    // 'en-US', 'en-GB' -> 'en', 'es-ES', 'es-MX' -> 'es'
+    load: 'languageOnly',
     interpolation: {
       escapeValue: false,
     },

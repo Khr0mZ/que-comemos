@@ -4,9 +4,11 @@
     "tagline": "¡A cocinar algo rico!"
   },
   "navigation": {
+    "week": "¿Qué comemos?",
+    "shopping": "A Comprar",
+    "recipes": "Mi recetario",
     "inventory": "Mi Despensa",
-    "recipes": "Mis Recetas",
-    "home": "Plan"
+    "cooking": "A los fogones"
   },
   "inventory": {
     "title": "Mi Despensa",
@@ -45,7 +47,7 @@
     }
   },
   "recipes": {
-    "title": "Mis Recetas",
+    "title": "Mi recetario",
     "addRecipe": "Crear Receta",
     "searchPlaceholder": "¿Qué comemos?",
     "noRecipes": "¡Esto está muy vacío! Añade tus platos favoritos 🍳",
@@ -75,7 +77,8 @@
     "deleteAllRecipesMessage": "¿Borrar todas las recetas? ¡Cuidado, que no vuelven!",
     "randomRecipe": "¡Sorpréndeme!",
     "noRecipesFound": "No encuentro nada con esos filtros 😔",
-    "loadingMore": "Mostrando {{loaded}} de {{total}} recetas"
+    "loadingMore": "Mostrando {{loaded}} de {{total}} recetas",
+    "showOnlyInternal": "Solo mis recetas"
   },
   "home": {
     "title": "¿Qué comemos?",

@@ -1,4 +1,5 @@
-import { Box, Card, CardMedia, Chip, Divider, IconButton, Typography } from '@mui/material'
+import { Box, Card, CardMedia, Chip, Divider, IconButton, Skeleton, Typography } from '@mui/material'
+import { memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Recipe } from '../types'
 
@@ -10,8 +11,10 @@ interface RecipeCardProps {
     showActions?: boolean
 }
 
-export default function RecipeCard({ recipe, onView, onEdit, onDelete, showActions = true }: RecipeCardProps) {
+function RecipeCard({ recipe, onView, onEdit, onDelete, showActions = true }: RecipeCardProps) {
     const { t } = useTranslation()
+    const [imageLoading, setImageLoading] = useState(true)
+    const [imageError, setImageError] = useState(false)
 
     return (
         <Card
@@ -24,13 +27,48 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, showActio
             onClick={() => onView(recipe)}
         >
             {recipe.imageURL && (
-                <CardMedia
-                    component="img"
-                    height="200"
-                    image={recipe.imageURL}
-                    alt={recipe.name}
-                    sx={{ objectFit: 'cover' }}
-                />
+                <Box sx={{ position: 'relative', width: '100%', height: 200 }}>
+                    {imageLoading && !imageError && (
+                        <Skeleton
+                            variant="rectangular"
+                            width="100%"
+                            height={200}
+                            sx={{ position: 'absolute', top: 0, left: 0 }}
+                        />
+                    )}
+                    <CardMedia
+                        component="img"
+                        height="200"
+                        image={recipe.imageURL}
+                        alt={recipe.name}
+                        loading="lazy"
+                        onLoad={() => setImageLoading(false)}
+                        onError={() => {
+                            setImageLoading(false)
+                            setImageError(true)
+                        }}
+                        sx={{
+                            objectFit: 'cover',
+                            display: imageError ? 'none' : 'block',
+                        }}
+                    />
+                    {imageError && (
+                        <Box
+                            sx={{
+                                width: '100%',
+                                height: 200,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                bgcolor: 'background.default',
+                            }}
+                        >
+                            <Typography variant="body2" color="text.secondary">
+                                🍳
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
             )}
             <Box
                 sx={{
@@ -111,3 +149,5 @@ export default function RecipeCard({ recipe, onView, onEdit, onDelete, showActio
         </Card>
     )
 }
+
+export default memo(RecipeCard)

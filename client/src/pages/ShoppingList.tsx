@@ -44,6 +44,42 @@ export default function ShoppingList() {
     getAllIngredients().then(setAllIngredientsData);
   }, []);
 
+  // Ordenar las recetas según el orden en Planning (días de la semana y luego lunch/dinner)
+  const orderedRecipeLists = useMemo(() => {
+    const daysOrder: Array<keyof typeof week> = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+    const mealTypesOrder: Array<"lunch" | "dinner"> = ["lunch", "dinner"];
+
+    // Crear un mapa de recetas con su posición en la semana
+    const recipePositions = new Map<string, number>();
+    let position = 0;
+
+    for (const day of daysOrder) {
+      for (const mealType of mealTypesOrder) {
+        for (const meal of week[day][mealType]) {
+          if (!meal.completed && !recipePositions.has(meal.recipeName)) {
+            recipePositions.set(meal.recipeName, position);
+            position++;
+          }
+        }
+      }
+    }
+
+    // Ordenar las recetas según su posición en la semana
+    return [...shoppingList.recipeLists].sort((a, b) => {
+      const posA = recipePositions.get(a.recipeName) ?? Infinity;
+      const posB = recipePositions.get(b.recipeName) ?? Infinity;
+      return posA - posB;
+    });
+  }, [shoppingList.recipeLists, week]);
+
   // Contar cuántas veces aparece cada receta en la semana (solo las no completadas)
   const recipeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -295,7 +331,7 @@ export default function ShoppingList() {
               <Typography variant="h6" sx={{ mb: 2 }}>
                 {t("shopping.recipeLists") || "Listas por receta"}
               </Typography>
-              {shoppingList.recipeLists.map((recipeList) => (
+              {orderedRecipeLists.map((recipeList) => (
                 <Card key={recipeList.recipeName} sx={{ mb: 2 }}>
                   <CardContent>
                     <Box

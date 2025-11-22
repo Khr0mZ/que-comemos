@@ -8,6 +8,7 @@ import {
   Fade,
   Paper,
 } from "@mui/material";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useRandomBackground } from "../hooks/useRandomBackground";
@@ -96,6 +97,42 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const currentLanguage = i18nHook.language || "es";
   const backgroundImage = useRandomBackground();
+
+  // Detectar idioma del dispositivo automáticamente en la primera carga
+  useEffect(() => {
+    // Esperar un momento para asegurar que i18n esté completamente inicializado
+    const detectLanguage = () => {
+      // Verificar si hay un idioma guardado válido
+      const savedLanguage = localStorage.getItem("i18nextLng");
+      
+      // Si no hay idioma guardado o es inválido, detectar del navegador
+      if (!savedLanguage || (savedLanguage !== 'es' && savedLanguage !== 'en')) {
+        // Detectar idioma del navegador
+        const browserLanguage = navigator.language || navigator.languages?.[0] || "es";
+        
+        // Convertir variantes a idiomas base soportados
+        let detectedLang = "es"; // fallback
+        const langLower = browserLanguage.toLowerCase();
+        if (langLower.startsWith("en")) {
+          detectedLang = "en";
+        } else if (langLower.startsWith("es")) {
+          detectedLang = "es";
+        }
+        
+        // Cambiar al idioma detectado si es diferente del actual
+        const currentLang = i18n.language || "es";
+        if (currentLang !== detectedLang) {
+          i18n.changeLanguage(detectedLang);
+        }
+      }
+    };
+
+    // Ejecutar inmediatamente y también después de un pequeño delay para asegurar inicialización
+    detectLanguage();
+    const timeoutId = setTimeout(detectLanguage, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Proteger rutas: redirigir a auth si no está autenticado
   // (solo la página de autenticación es pública)

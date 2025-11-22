@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { dbWriterPlugin } from './vite-plugin-db-writer'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,10 +12,21 @@ export default defineConfig({
       'localhost',
       '.localhost',
     ],
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
+        changeOrigin: true,
+        ws: true, // Habilitar proxy de WebSockets
+      },
+      '/socket.io': {
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
+        changeOrigin: true,
+        ws: true, // Habilitar proxy de WebSockets para Socket.IO
+      },
+    },
   },
   plugins: [
     react(),
-    dbWriterPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'vite.svg'],

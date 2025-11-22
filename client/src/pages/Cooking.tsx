@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../hooks/useSnackbar";
 import {
   markOneRecipeInstanceAsCompleted,
@@ -23,14 +24,15 @@ import {
 } from "../hooks/useStorage";
 import { storage } from "../services/storage";
 import type { Recipe, RecipeAvailability } from "../types";
-import { getAllIngredients } from "../utils/ingredientTranslations";
-import type { IngredientData } from "../utils/ingredientTranslations";
-import { checkRecipeAvailability } from "../utils/recipeUtils";
 import { getRandomColorFromString } from "../utils/colorUtils";
+import type { IngredientData } from "../utils/ingredientTranslations";
+import { getAllIngredients } from "../utils/ingredientTranslations";
+import { checkRecipeAvailability } from "../utils/recipeUtils";
 
 export default function Cooking() {
   const { t, i18n: i18nHook } = useTranslation();
   const { showSnackbar } = useSnackbar();
+  const navigate = useNavigate();
   const { shoppingList, refresh } = useShoppingList();
   const { refresh: refreshIngredients } = useIngredients();
   const { week } = useWeek();
@@ -43,7 +45,9 @@ export default function Cooking() {
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(
     new Set()
   );
-  const [allIngredientsData, setAllIngredientsData] = useState<IngredientData[]>([]);
+  const [allIngredientsData, setAllIngredientsData] = useState<
+    IngredientData[]
+  >([]);
 
   useEffect(() => {
     getAllIngredients().then(setAllIngredientsData);
@@ -257,6 +261,8 @@ export default function Cooking() {
       await markOneRecipeInstanceAsCompleted(recipeName);
       refresh();
 
+      navigate("/planning");
+
       showSnackbar(
         t("cooking.recipeCompleted") || "¡Receta completada! ¡A comer!",
         "success"
@@ -389,8 +395,10 @@ export default function Cooking() {
                                       match.inventoryIngredient.id
                                     ] !== originalMeasure;
 
-                                  const ingredientId = match.inventoryIngredient.id;
-                                  const baseColor = getRandomColorFromString(ingredientId);
+                                  const ingredientId =
+                                    match.inventoryIngredient.id;
+                                  const baseColor =
+                                    getRandomColorFromString(ingredientId);
                                   const borderColor = isEdited
                                     ? "primary.main"
                                     : baseColor;
@@ -432,7 +440,12 @@ export default function Cooking() {
                                             fontWeight={500}
                                           >
                                             {(() => {
-                                              const ingData = allIngredientsData.find((g) => g.id === match.inventoryIngredient.id);
+                                              const ingData =
+                                                allIngredientsData.find(
+                                                  (g) =>
+                                                    g.id ===
+                                                    match.inventoryIngredient.id
+                                                );
                                               return ingData
                                                 ? i18nHook.language === "en"
                                                   ? ingData.nameEN
@@ -448,7 +461,12 @@ export default function Cooking() {
                                               "Requerido en receta"}
                                             :{" "}
                                             {(() => {
-                                              const ingData = allIngredientsData.find((g) => g.id === match.recipeIngredientName);
+                                              const ingData =
+                                                allIngredientsData.find(
+                                                  (g) =>
+                                                    g.id ===
+                                                    match.recipeIngredientName
+                                                );
                                               return ingData
                                                 ? i18nHook.language === "en"
                                                   ? ingData.nameEN
@@ -495,8 +513,7 @@ export default function Cooking() {
                                                 onClick={() =>
                                                   handleConfirmIngredientInventory(
                                                     recipeList.recipeName,
-                                                    match.inventoryIngredient
-                                                      .id
+                                                    match.inventoryIngredient.id
                                                   )
                                                 }
                                                 sx={{
@@ -533,8 +550,7 @@ export default function Cooking() {
                                                 onClick={() =>
                                                   handleCancelIngredientEdit(
                                                     recipeList.recipeName,
-                                                    match.inventoryIngredient
-                                                      .id
+                                                    match.inventoryIngredient.id
                                                   )
                                                 }
                                                 sx={{

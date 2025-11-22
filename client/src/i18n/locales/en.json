@@ -75,7 +75,8 @@
     "deleteAllRecipesMessage": "Delete all recipes? This can't be undone!",
     "randomRecipe": "Surprise Me!",
     "noRecipesFound": "Nothing found 😔",
-    "loadingMore": "Showing {{loaded}} of {{total}} recipes"
+    "loadingMore": "Showing {{loaded}} of {{total}} recipes",
+    "showOnlyInternal": "Only my recipes"
   },
   "home": {
     "title": "What's for dinner?",

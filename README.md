@@ -18,6 +18,7 @@ Una aplicación web progresiva (PWA) para ayudarte a decidir qué cocinar cada d
 
 - Node.js 18+ y npm
 - Ollama instalado con el modelo `gpt-oss-20b` (opcional, solo para generación de recetas con IA)
+- Clerk account (para autenticación)
 
 ### Instalación
 
@@ -28,19 +29,61 @@ git clone <url-del-repositorio>
 cd que-comemos
 ```
 
-2. Instala las dependencias:
+2. Instala las dependencias del cliente:
 
 ```bash
+cd client
 npm install
 ```
 
-3. Inicia el servidor de desarrollo:
+3. Instala las dependencias del servidor:
 
 ```bash
-npm run dev
+cd ../server
+npm install
 ```
 
-4. Abre tu navegador en `http://localhost:5173`
+4. Configura las variables de entorno del servidor:
+
+```bash
+cd server
+cp .env.example .env
+# Edita .env y agrega tu CLERK_SECRET_KEY
+```
+
+5. Configura las variables de entorno del cliente:
+
+```bash
+cd ../client
+# Crea un archivo .env con:
+# VITE_CLERK_PUBLISHABLE_KEY=tu_clave_publica_de_clerk
+```
+
+6. **Inicio del servidor backend:**
+
+   ```bash
+   cd server
+   ./start-dev.sh
+   ```
+
+   Este script iniciará automáticamente:
+
+   - Servidor backend (puerto 3001)
+   - Túnel Cloudflare (URL pública)
+   - **Actualizará automáticamente** `client/.env` con la URL del túnel
+
+   El script detectará la URL del túnel y la agregará/actualizará en `client/.env` automáticamente.
+
+7. **Inicio del cliente frontend (en otra terminal):**
+
+   ```bash
+   cd client
+   npm run dev
+   ```
+
+   El script del servidor detectará automáticamente cuando el cliente esté corriendo y creará un túnel para él también.
+
+8. Abre tu navegador en la URL del túnel del cliente (mostrada por el script) o `http://localhost:5173`
 
 ### Configuración de Ollama (Opcional)
 
@@ -82,13 +125,22 @@ Si Ollama está en otra URL o puerto, puedes modificar `src/services/ollama.ts` 
 
 ## 🛠️ Tecnologías
 
+### Cliente
+
 - **React 19** + **TypeScript**
 - **Vite** - Build tool y dev server
 - **React Router** - Navegación
-- **Dexie.js** - IndexedDB wrapper para almacenamiento local
+- **Clerk** - Autenticación de usuarios
 - **i18next** - Internacionalización
 - **TheMealDB API** - Base de datos de recetas externas
 - **Ollama** - Modelo de IA local para generación de recetas
+
+### Servidor
+
+- **Express** - Framework web para Node.js
+- **TypeScript** - Lenguaje de programación
+- **Clerk SDK** - Autenticación y gestión de usuarios
+- **File System** - Almacenamiento de datos en archivos JSON
 
 ## 📦 Build para Producción
 
@@ -109,8 +161,13 @@ La aplicación puede instalarse como PWA en dispositivos móviles y escritorio:
 
 ## 📝 Notas
 
-- Los datos se almacenan localmente en IndexedDB (solo en tu dispositivo)
-- Las recetas externas de TheMealDB se pueden guardar localmente para acceso offline
+- **Almacenamiento**: Los datos se almacenan en el servidor backend en archivos JSON por usuario (`db/{userId}/`)
+- **Guardado optimista**: Los cambios se reflejan inmediatamente en la UI y luego se guardan en el servidor en segundo plano
+- **Carga automática**: Cuando un usuario inicia sesión, sus datos se cargan automáticamente desde el servidor
+- **Aislamiento de datos**: Cada usuario solo puede acceder a sus propios datos gracias a la autenticación con Clerk
+- **Túneles dinámicos**: El script `start-dev.sh` crea automáticamente un túnel público de Cloudflare para compartir la aplicación
+- **Sin recargas**: El servidor backend gestiona los datos sin causar recargas de página
+- Las recetas externas de TheMealDB se pueden guardar en tu recetario personal
 - La generación con IA requiere Ollama corriendo localmente
 - La API de TheMealDB es gratuita pero tiene límites (considera obtener una API key propia para producción)
 

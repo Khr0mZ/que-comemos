@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Dialog, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
 interface WarningDialogProps {
@@ -9,6 +9,7 @@ interface WarningDialogProps {
   cancelText?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  loading?: boolean;
 }
 
 export default function WarningDialog({
@@ -19,13 +20,14 @@ export default function WarningDialog({
   cancelText,
   onConfirm,
   onCancel,
+  loading = false,
 }: WarningDialogProps) {
   const { t } = useTranslation();
 
   return (
     <Dialog
       open={open}
-      onClose={onCancel}
+      onClose={loading ? undefined : onCancel}
       slotProps={{
         paper: {
           sx: {
@@ -82,7 +84,7 @@ export default function WarningDialog({
           }}
         >
           <Box>
-            <Button onClick={onCancel} variant="outlined">
+            <Button onClick={onCancel} variant="outlined" disabled={loading}>
               {cancelText || t("common.cancel")}
             </Button>
           </Box>
@@ -90,12 +92,18 @@ export default function WarningDialog({
             <Button
               onClick={onConfirm}
               variant="contained"
+              disabled={loading}
               sx={{
                 bgcolor: "error.main",
                 "&:hover": { color: "error.main" },
+                minWidth: 100,
               }}
             >
-              {confirmText || t("common.confirm")}
+              {loading ? (
+                <CircularProgress size={20} sx={{ color: "inherit" }} />
+              ) : (
+                confirmText || t("common.confirm")
+              )}
             </Button>
           </Box>
         </Box>

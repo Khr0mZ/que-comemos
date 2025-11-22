@@ -4138,8 +4138,8 @@
   },
   {
     "id": "tortillas",
-    "nameEN": "Tortillas",
-    "nameES": "Tortillas de maíz",
+    "nameEN": "Tortillas (wheat)",
+    "nameES": "Tortillas de trigo",
     "category": "grain",
     "measure": ""
   },

@@ -170,7 +170,8 @@ export default function Planning() {
           borderRadius: "24px",
           boxShadow: "0 10px 30px rgba(255, 23, 68, 0.15)",
           border: "2px solid #FFC107",
-          overflow: "hidden",
+          overflowX: "auto",
+          overflowY: "hidden",
           transition: "all 0.3s ease",
           background: "linear-gradient(to bottom, #FFF9E6 0%, #FFFFFF 100%)",
           "&:hover": {
@@ -179,7 +180,11 @@ export default function Planning() {
           },
         }}
       >
-        <Table>
+        <Table
+          sx={{
+            minWidth: 600, // Ancho mínimo para asegurar que la tabla sea más ancha que el contenedor en pantallas pequeñas
+          }}
+        >
           <TableHead>
             <TableRow
               sx={{
@@ -207,9 +212,6 @@ export default function Planning() {
                     borderBottom: "none",
                     textShadow: "0 2px 4px rgba(0,0,0,0.2)",
                     transition: "all 0.2s",
-                    "&:hover": {
-                      transform: "scale(1.05)",
-                    },
                   }}
                 >
                   {day.label}
@@ -227,7 +229,6 @@ export default function Planning() {
                   transition: "all 0.2s",
                   "&:hover": {
                     backgroundColor: "#FFD54F20",
-                    transform: "scale(1.01)",
                   },
                 }}
               >
@@ -286,7 +287,10 @@ export default function Planning() {
                                 transform: "scale(1.2) rotate(10deg)",
                                 opacity: 0.8,
                               },
-                              cursor: "default",
+                              cursor: "pointer",
+                            }}
+                            onClick={() => {
+                              navigate("/recipes");
                             }}
                           >
                             {t("week.noRecipes")}
