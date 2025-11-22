@@ -45,8 +45,8 @@ import {
 } from "../utils/ingredientTranslations";
 import {
   checkRecipeAvailability,
-  getYouTubeEmbedUrl,
   getRecipeName,
+  getYouTubeEmbedUrl,
 } from "../utils/recipeUtils";
 
 export default function RecipeDetails() {
@@ -142,7 +142,15 @@ export default function RecipeDetails() {
   };
 
   // Función helper para ordenar ingredientes alfabéticamente según el idioma
-  const getSortedIngredients = (ingredients: RecipeIngredient[]): RecipeIngredient[] => {
+  // Si skipSort es true, devuelve los ingredientes en su orden original (útil durante la edición)
+  const getSortedIngredients = (
+    ingredients: RecipeIngredient[],
+    skipSort: boolean = false
+  ): RecipeIngredient[] => {
+    if (skipSort) {
+      return [...ingredients]; // Devolver en orden original sin ordenar
+    }
+
     const currentLang = i18n.language || "es";
     return [...ingredients].sort((a, b) => {
       const ingDataA = allIngredientsData.find((g) => g.id === a.id);
@@ -305,19 +313,22 @@ export default function RecipeDetails() {
 
   const handleSaveEdit = async () => {
     const currentLang = i18n.language || "es";
-    const nameToCheck = currentLang === "en" ? formData.nameEN : formData.nameES;
+    const nameToCheck =
+      currentLang === "en" ? formData.nameEN : formData.nameES;
     if (!nameToCheck.trim() || isSaving) return;
 
     try {
       setIsSaving(true);
       // Al guardar, mantener el nombre del otro idioma si existe, o usar el mismo si no existe
       const recipeToSave: Recipe = {
-        nameES: currentLang === "en" 
-          ? (formData.nameES.trim() || formData.nameEN.trim() || "")
-          : formData.nameES.trim() || "",
-        nameEN: currentLang === "en"
-          ? formData.nameEN.trim() || ""
-          : (formData.nameEN.trim() || formData.nameES.trim() || ""),
+        nameES:
+          currentLang === "en"
+            ? formData.nameES.trim() || formData.nameEN.trim() || ""
+            : formData.nameES.trim() || "",
+        nameEN:
+          currentLang === "en"
+            ? formData.nameEN.trim() || ""
+            : formData.nameEN.trim() || formData.nameES.trim() || "",
         ingredients: formData.ingredients,
         instructionsES: formData.instructionsES?.trim() || undefined,
         instructionsEN: formData.instructionsEN?.trim() || undefined,
@@ -337,7 +348,11 @@ export default function RecipeDetails() {
         await saveRecipe(recipeToSave);
         showSnackbar(t("recipes.saveRecipe") + "!", "success");
         // Usar nameES como identificador en la URL
-        navigate(`/recipe/${encodeURIComponent(recipeToSave.nameES || recipeToSave.nameEN)}`);
+        navigate(
+          `/recipe/${encodeURIComponent(
+            recipeToSave.nameES || recipeToSave.nameEN
+          )}`
+        );
       } else if (recipe) {
         // Actualizar receta existente
         const originalIdentifier = recipe.nameES || recipe.nameEN;
@@ -528,9 +543,7 @@ export default function RecipeDetails() {
                     fullWidth
                     label={t("recipes.nameLabel") || "Nombre"}
                     value={
-                      i18n.language === "en"
-                        ? formData.nameEN
-                        : formData.nameES
+                      i18n.language === "en" ? formData.nameEN : formData.nameES
                     }
                     onChange={(e) => {
                       const currentLang = i18n.language || "es";
@@ -889,253 +902,178 @@ export default function RecipeDetails() {
                     borderRadius: 1,
                   }}
                 >
-                  {getSortedIngredients(formData.ingredients).map((ing, index) => {
-                    // Encontrar el índice original en formData.ingredients para mantener la referencia correcta
-                    const originalIndex = formData.ingredients.findIndex(
-                      (origIng) => origIng.id === ing.id && origIng.measure === ing.measure
-                    );
-                    const actualIndex = originalIndex !== -1 ? originalIndex : index;
-                    return (
-                    <Stack
-                      key={`ingredient-${index}-${i18n.language}`}
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                    >
-                      <Autocomplete
-                        options={allIngredientNames}
-                        value={ing.id || null}
-                        onChange={(_, newValue) => {
-                          // Cuando se selecciona una opción, newValue es el id
-                          updateIngredient(index, "id", newValue || "");
-                          // Limpiar el estado del input cuando se selecciona
-                          setIngredientInputValues((prev) => {
-                            const newValues = { ...prev };
-                            delete newValues[index];
-                            return newValues;
-                          });
-                        }}
-                        getOptionLabel={(option) => {
-                          if (typeof option === "string") {
-                            const ingData = allIngredientsData.find(
-                              (g) => g.id === option
-                            );
-                            if (ingData) {
-                              return i18n.language === "en"
-                                ? ingData.nameEN
-                                : ingData.nameES;
-                            }
-                            return option;
-                          }
-                          return "";
-                        }}
-                        filterOptions={(options, { inputValue }) => {
-                          const currentLang = i18n.language || "es";
-
-                          // Filtrar opciones basándose SOLO en el idioma seleccionado (igual que IngredientList)
-                          if (!inputValue || !inputValue.trim()) {
-                            // Cuando no hay input, devolver las opciones ordenadas
-                            return [...options].sort((a, b) => {
-                              const ingDataA = allIngredientsData.find(
-                                (g) => g.id === a
-                              );
-                              const ingDataB = allIngredientsData.find(
-                                (g) => g.id === b
-                              );
-                              if (!ingDataA || !ingDataB) return 0;
-
-                              const nameA =
-                                currentLang === "en"
-                                  ? ingDataA.nameEN
-                                  : ingDataA.nameES;
-                              const nameB =
-                                currentLang === "en"
-                                  ? ingDataB.nameEN
-                                  : ingDataB.nameES;
-
-                              return normalizeSearchText(nameA).localeCompare(
-                                normalizeSearchText(nameB),
-                                currentLang,
-                                { sensitivity: "base" }
-                              );
-                            });
-                          }
-
-                          const normalizedSearch =
-                            normalizeSearchText(inputValue);
-
-                          // Filtrar solo por el nombre del idioma actual usando normalizeSearchText
-                          const filtered = options.filter((optionId) => {
-                            const ingData = allIngredientsData.find(
-                              (g) => g.id === optionId
-                            );
-                            if (!ingData) return false;
-
-                            // Solo buscar en el nombre del idioma actual (igual que IngredientList)
-                            const nameInCurrentLang =
-                              currentLang === "en"
-                                ? ingData.nameEN
-                                : ingData.nameES;
-                            const normalizedTranslated =
-                              normalizeSearchText(nameInCurrentLang);
-
-                            // Buscar al inicio del nombre completo o al inicio de cualquier palabra (igual que IngredientList)
-                            const words = normalizedTranslated.split(/\s+/);
-                            const matchesTranslation =
-                              normalizedTranslated.startsWith(
-                                normalizedSearch
-                              ) ||
-                              words.some((word) =>
-                                word.startsWith(normalizedSearch)
-                              );
-
-                            return matchesTranslation;
-                          });
-
-                          // Ordenar alfabéticamente por el nombre del idioma actual
-                          return filtered.sort((a, b) => {
-                            const ingDataA = allIngredientsData.find(
-                              (g) => g.id === a
-                            );
-                            const ingDataB = allIngredientsData.find(
-                              (g) => g.id === b
-                            );
-                            if (!ingDataA || !ingDataB) return 0;
-
-                            const nameA =
-                              currentLang === "en"
-                                ? ingDataA.nameEN
-                                : ingDataA.nameES;
-                            const nameB =
-                              currentLang === "en"
-                                ? ingDataB.nameEN
-                                : ingDataB.nameES;
-
-                            return normalizeSearchText(nameA).localeCompare(
-                              normalizeSearchText(nameB),
-                              currentLang,
-                              { sensitivity: "base" }
-                            );
-                          });
-                        }}
-                        isOptionEqualToValue={(option, value) => {
-                          // Comparar por id
-                          return option === value;
-                        }}
-                        inputValue={
-                          ingredientInputValues[actualIndex] !== undefined
-                            ? ingredientInputValues[actualIndex]
-                            : ing.id
-                            ? (() => {
+                  {getSortedIngredients(formData.ingredients, true).map(
+                    (ing, index) => {
+                      // Encontrar el índice original en formData.ingredients para mantener la referencia correcta
+                      const originalIndex = formData.ingredients.findIndex(
+                        (origIng) =>
+                          origIng.id === ing.id &&
+                          origIng.measure === ing.measure
+                      );
+                      const actualIndex =
+                        originalIndex !== -1 ? originalIndex : index;
+                      return (
+                        <Stack
+                          key={`ingredient-${index}-${i18n.language}`}
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                        >
+                          <Autocomplete
+                            options={allIngredientNames}
+                            value={ing.id || null}
+                            onChange={(_, newValue) => {
+                              // Cuando se selecciona una opción, newValue es el id
+                              updateIngredient(index, "id", newValue || "");
+                              // Limpiar el estado del input cuando se selecciona
+                              setIngredientInputValues((prev) => {
+                                const newValues = { ...prev };
+                                delete newValues[index];
+                                return newValues;
+                              });
+                            }}
+                            getOptionLabel={(option) => {
+                              if (typeof option === "string") {
                                 const ingData = allIngredientsData.find(
-                                  (g) => g.id === ing.id
+                                  (g) => g.id === option
                                 );
-                                return ingData
-                                  ? i18n.language === "en"
+                                if (ingData) {
+                                  return i18n.language === "en"
                                     ? ingData.nameEN
-                                    : ingData.nameES
-                                  : ing.id;
-                              })()
-                            : ""
-                        }
-                        onInputChange={(_, newInputValue, reason) => {
-                          // Actualizar el estado del input para permitir escribir y filtrar
-                          setIngredientInputValues((prev) => ({
-                            ...prev,
-                            [actualIndex]: newInputValue,
-                          }));
+                                    : ingData.nameES;
+                                }
+                                return option;
+                              }
+                              return "";
+                            }}
+                            filterOptions={(options, { inputValue }) => {
+                              const currentLang = i18n.language || "es";
 
-                          if (reason === "clear") {
-                            // Cuando se limpia el campo
-                            updateIngredient(actualIndex, "id", "");
-                            setIngredientInputValues((prev) => {
-                              const newValues = { ...prev };
-                              delete newValues[actualIndex];
-                              return newValues;
-                            });
-                          } else if (reason === "reset") {
-                            // Cuando se resetea, limpiar el estado del input
-                            setIngredientInputValues((prev) => {
-                              const newValues = { ...prev };
-                              delete newValues[actualIndex];
-                              return newValues;
-                            });
-                          }
-                        }}
-                        sx={{
-                          flex: 2,
-                          ...getAutocompleteColorStyles(
-                            `recipes.ingredientName-${index}`
-                          ),
-                        }}
-                        slotProps={{
-                          popper: {
-                            sx: {
-                              maxWidth: "100%",
-                              "& .MuiAutocomplete-listbox": {
-                                maxWidth: "100%",
-                                overflowX: "hidden",
-                              },
-                            },
-                          },
-                          paper: {
-                            sx: {
-                              maxWidth: "100%",
-                              overflowX: "hidden",
-                            },
-                          },
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label={t("recipes.ingredientName")}
-                            placeholder={t("recipes.ingredientName")}
-                            size="small"
-                            sx={{ flex: 2 }}
-                            onBlur={(e) => {
-                              const inputValue = e.target.value;
+                              // Filtrar opciones basándose SOLO en el idioma seleccionado (igual que IngredientList)
                               if (!inputValue || !inputValue.trim()) {
-                                return;
+                                // Cuando no hay input, devolver las opciones ordenadas
+                                return [...options].sort((a, b) => {
+                                  const ingDataA = allIngredientsData.find(
+                                    (g) => g.id === a
+                                  );
+                                  const ingDataB = allIngredientsData.find(
+                                    (g) => g.id === b
+                                  );
+                                  if (!ingDataA || !ingDataB) return 0;
+
+                                  const nameA =
+                                    currentLang === "en"
+                                      ? ingDataA.nameEN
+                                      : ingDataA.nameES;
+                                  const nameB =
+                                    currentLang === "en"
+                                      ? ingDataB.nameEN
+                                      : ingDataB.nameES;
+
+                                  return normalizeSearchText(
+                                    nameA
+                                  ).localeCompare(
+                                    normalizeSearchText(nameB),
+                                    currentLang,
+                                    { sensitivity: "base" }
+                                  );
+                                });
                               }
 
-                              const currentLang = i18n.language || "es";
                               const normalizedSearch =
                                 normalizeSearchText(inputValue);
 
-                              // Buscar el ingrediente más aproximado
-                              // Prioridad: 1) Coincidencia exacta, 2) Empieza con, 3) Contiene
-                              let bestMatch: IngredientData | null = null;
-                              let bestScore = 0;
+                              // Filtrar solo por el nombre del idioma actual usando normalizeSearchText
+                              const filtered = options.filter((optionId) => {
+                                const ingData = allIngredientsData.find(
+                                  (g) => g.id === optionId
+                                );
+                                if (!ingData) return false;
 
-                              for (const ingData of allIngredientsData) {
+                                // Solo buscar en el nombre del idioma actual (igual que IngredientList)
                                 const nameInCurrentLang =
                                   currentLang === "en"
                                     ? ingData.nameEN
                                     : ingData.nameES;
-                                const normalizedName =
+                                const normalizedTranslated =
                                   normalizeSearchText(nameInCurrentLang);
 
-                                let score = 0;
-                                if (normalizedName === normalizedSearch) {
-                                  score = 3; // Coincidencia exacta
-                                } else if (
-                                  normalizedName.startsWith(normalizedSearch)
-                                ) {
-                                  score = 2; // Empieza con
-                                } else if (
-                                  normalizedName.includes(normalizedSearch)
-                                ) {
-                                  score = 1; // Contiene
-                                }
+                                // Buscar al inicio del nombre completo o al inicio de cualquier palabra (igual que IngredientList)
+                                const words = normalizedTranslated.split(/\s+/);
+                                const matchesTranslation =
+                                  normalizedTranslated.startsWith(
+                                    normalizedSearch
+                                  ) ||
+                                  words.some((word) =>
+                                    word.startsWith(normalizedSearch)
+                                  );
 
-                                if (score > bestScore) {
-                                  bestScore = score;
-                                  bestMatch = ingData;
-                                }
-                              }
+                                return matchesTranslation;
+                              });
 
-                              if (bestMatch && bestScore > 0) {
-                                updateIngredient(actualIndex, "id", bestMatch.id);
+                              // Ordenar alfabéticamente por el nombre del idioma actual
+                              return filtered.sort((a, b) => {
+                                const ingDataA = allIngredientsData.find(
+                                  (g) => g.id === a
+                                );
+                                const ingDataB = allIngredientsData.find(
+                                  (g) => g.id === b
+                                );
+                                if (!ingDataA || !ingDataB) return 0;
+
+                                const nameA =
+                                  currentLang === "en"
+                                    ? ingDataA.nameEN
+                                    : ingDataA.nameES;
+                                const nameB =
+                                  currentLang === "en"
+                                    ? ingDataB.nameEN
+                                    : ingDataB.nameES;
+
+                                return normalizeSearchText(nameA).localeCompare(
+                                  normalizeSearchText(nameB),
+                                  currentLang,
+                                  { sensitivity: "base" }
+                                );
+                              });
+                            }}
+                            isOptionEqualToValue={(option, value) => {
+                              // Comparar por id
+                              return option === value;
+                            }}
+                            inputValue={
+                              ingredientInputValues[actualIndex] !== undefined
+                                ? ingredientInputValues[actualIndex]
+                                : ing.id
+                                ? (() => {
+                                    const ingData = allIngredientsData.find(
+                                      (g) => g.id === ing.id
+                                    );
+                                    return ingData
+                                      ? i18n.language === "en"
+                                        ? ingData.nameEN
+                                        : ingData.nameES
+                                      : ing.id;
+                                  })()
+                                : ""
+                            }
+                            onInputChange={(_, newInputValue, reason) => {
+                              // Actualizar el estado del input para permitir escribir y filtrar
+                              setIngredientInputValues((prev) => ({
+                                ...prev,
+                                [actualIndex]: newInputValue,
+                              }));
+
+                              if (reason === "clear") {
+                                // Cuando se limpia el campo
+                                updateIngredient(actualIndex, "id", "");
+                                setIngredientInputValues((prev) => {
+                                  const newValues = { ...prev };
+                                  delete newValues[actualIndex];
+                                  return newValues;
+                                });
+                              } else if (reason === "reset") {
+                                // Cuando se resetea, limpiar el estado del input
                                 setIngredientInputValues((prev) => {
                                   const newValues = { ...prev };
                                   delete newValues[actualIndex];
@@ -1143,53 +1081,145 @@ export default function RecipeDetails() {
                                 });
                               }
                             }}
+                            sx={{
+                              flex: 2,
+                              ...getAutocompleteColorStyles(
+                                `recipes.ingredientName-${index}`
+                              ),
+                            }}
+                            slotProps={{
+                              popper: {
+                                sx: {
+                                  maxWidth: "100%",
+                                  "& .MuiAutocomplete-listbox": {
+                                    maxWidth: "100%",
+                                    overflowX: "hidden",
+                                  },
+                                },
+                              },
+                              paper: {
+                                sx: {
+                                  maxWidth: "100%",
+                                  overflowX: "hidden",
+                                },
+                              },
+                            }}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label={t("recipes.ingredientName")}
+                                placeholder={t("recipes.ingredientName")}
+                                size="small"
+                                sx={{ flex: 2 }}
+                                onBlur={(e) => {
+                                  const inputValue = e.target.value;
+                                  if (!inputValue || !inputValue.trim()) {
+                                    return;
+                                  }
+
+                                  const currentLang = i18n.language || "es";
+                                  const normalizedSearch =
+                                    normalizeSearchText(inputValue);
+
+                                  // Buscar el ingrediente más aproximado
+                                  // Prioridad: 1) Coincidencia exacta, 2) Empieza con, 3) Contiene
+                                  let bestMatch: IngredientData | null = null;
+                                  let bestScore = 0;
+
+                                  for (const ingData of allIngredientsData) {
+                                    const nameInCurrentLang =
+                                      currentLang === "en"
+                                        ? ingData.nameEN
+                                        : ingData.nameES;
+                                    const normalizedName =
+                                      normalizeSearchText(nameInCurrentLang);
+
+                                    let score = 0;
+                                    if (normalizedName === normalizedSearch) {
+                                      score = 3; // Coincidencia exacta
+                                    } else if (
+                                      normalizedName.startsWith(
+                                        normalizedSearch
+                                      )
+                                    ) {
+                                      score = 2; // Empieza con
+                                    } else if (
+                                      normalizedName.includes(normalizedSearch)
+                                    ) {
+                                      score = 1; // Contiene
+                                    }
+
+                                    if (score > bestScore) {
+                                      bestScore = score;
+                                      bestMatch = ingData;
+                                    }
+                                  }
+
+                                  if (bestMatch && bestScore > 0) {
+                                    updateIngredient(
+                                      actualIndex,
+                                      "id",
+                                      bestMatch.id
+                                    );
+                                    setIngredientInputValues((prev) => {
+                                      const newValues = { ...prev };
+                                      delete newValues[actualIndex];
+                                      return newValues;
+                                    });
+                                  }
+                                }}
+                              />
+                            )}
+                            size="small"
                           />
-                        )}
-                        size="small"
-                      />
-                      <TextField
-                        label={t("recipes.ingredientMeasure")}
-                        placeholder="ej: 2 kg"
-                        value={ing.measure}
-                        onChange={(e) =>
-                          updateIngredient(actualIndex, "measure", e.target.value)
-                        }
-                        sx={{
-                          flex: 1,
-                          ...getTextFieldColorStyles(
-                            `recipes.ingredientMeasure-${index}`
-                          ),
-                        }}
-                        size="small"
-                      />
-                      <IconButton
-                        onClick={() => {
-                          removeIngredient(actualIndex);
-                          // Limpiar el estado del input cuando se elimina el ingrediente
-                          setIngredientInputValues((prev) => {
-                            const newValues = { ...prev };
-                            delete newValues[actualIndex];
-                            // Reindexar los valores después de eliminar
-                            const reindexed: Record<number, string> = {};
-                            Object.keys(newValues).forEach((key) => {
-                              const keyNum = parseInt(key);
-                              if (keyNum < actualIndex) {
-                                reindexed[keyNum] = newValues[keyNum];
-                              } else if (keyNum > actualIndex) {
-                                reindexed[keyNum - 1] = newValues[keyNum];
-                              }
-                            });
-                            return reindexed;
-                          });
-                        }}
-                        size="small"
-                        sx={{ fontSize: "1.3rem" }}
-                      >
-                        🗑️
-                      </IconButton>
-                    </Stack>
-                    );
-                  })}
+                          <TextField
+                            label={t("recipes.ingredientMeasure")}
+                            placeholder="ej: 2 kg"
+                            value={ing.measure}
+                            onChange={(e) =>
+                              updateIngredient(
+                                actualIndex,
+                                "measure",
+                                e.target.value
+                              )
+                            }
+                            sx={{
+                              flex: 1,
+                              ...getTextFieldColorStyles(
+                                `recipes.ingredientMeasure-${index}`
+                              ),
+                            }}
+                            size="small"
+                          />
+                          <IconButton
+                            onClick={() => {
+                              removeIngredient(actualIndex);
+                              // Limpiar el estado del input cuando se elimina el ingrediente
+                              setIngredientInputValues((prev) => {
+                                const newValues = { ...prev };
+                                delete newValues[actualIndex];
+                                // Reindexar los valores después de eliminar
+                                const reindexed: Record<number, string> = {};
+                                Object.keys(newValues).forEach((key) => {
+                                  const keyNum = parseInt(key);
+                                  if (keyNum < actualIndex) {
+                                    reindexed[keyNum] = newValues[keyNum];
+                                  } else if (keyNum > actualIndex) {
+                                    reindexed[keyNum - 1] = newValues[keyNum];
+                                  }
+                                });
+                                return reindexed;
+                              });
+                            }}
+                            size="small"
+                            sx={{ fontSize: "1.3rem" }}
+                          >
+                            🗑️
+                          </IconButton>
+                        </Stack>
+                      );
+                    }
+                  )}
                 </Box>
               </>
             ) : (
@@ -1198,25 +1228,27 @@ export default function RecipeDetails() {
                   {t("recipes.ingredientsLabel")}
                 </Typography>
                 <List key={`ingredients-${i18n.language}`}>
-                  {getSortedIngredients(displayRecipe?.ingredients || []).map((ingredient, idx) => {
-                    // Buscar el ingrediente completo por id
-                    const ingData = allIngredientsData.find(
-                      (g) => g.id === ingredient.id
-                    );
-                    const displayName = ingData
-                      ? i18n.language === "en"
-                        ? ingData.nameEN
-                        : ingData.nameES
-                      : ingredient.id;
-                    return (
-                      <ListItem key={idx}>
-                        <ListItemText
-                          primary={displayName}
-                          secondary={ingredient.measure}
-                        />
-                      </ListItem>
-                    );
-                  })}
+                  {getSortedIngredients(displayRecipe?.ingredients || []).map(
+                    (ingredient, idx) => {
+                      // Buscar el ingrediente completo por id
+                      const ingData = allIngredientsData.find(
+                        (g) => g.id === ingredient.id
+                      );
+                      const displayName = ingData
+                        ? i18n.language === "en"
+                          ? ingData.nameEN
+                          : ingData.nameES
+                        : ingredient.id;
+                      return (
+                        <ListItem key={idx}>
+                          <ListItemText
+                            primary={displayName}
+                            secondary={ingredient.measure}
+                          />
+                        </ListItem>
+                      );
+                    }
+                  )}
                 </List>
               </>
             )}
@@ -1301,7 +1333,7 @@ export default function RecipeDetails() {
 
       <WeekMealDialog
         open={weekDialogOpen}
-        recipeName={recipe ? (recipe.nameES || recipe.nameEN) : ""}
+        recipeName={recipe ? recipe.nameES || recipe.nameEN : ""}
         onClose={() => setWeekDialogOpen(false)}
         onConfirm={handleWeekDialogConfirm}
       />
